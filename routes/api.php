@@ -27,4 +27,6 @@ Route::prefix('v1')->namespace('V1')->group(function () {
     });
 
     Route::match(['get', 'post', 'put', 'delete'], '/user', [ApiController::class, 'user']);
+    Route::get('/tour/{slug}', [ApiController::class, 'tour']);
+    Route::match(['get', 'post', 'put', 'delete'], '/tour', [ApiController::class, 'tour']);
 });

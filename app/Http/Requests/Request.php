@@ -11,6 +11,6 @@ class Request extends FormRequest
 {
     protected function failedValidation(Validator $validator)
     {
-        throw new JsonApiException($validator->messages()->first(), ResponseStatusCode::PARAMS_INVALID->value);
+        throw new JsonApiException($validator->messages()->first(), ResponseStatusCode::PARAMS_INVALID);
     }
 }

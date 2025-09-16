@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\Commands\ApiCommand;
+use App\Http\Controllers\Api\V1\Commands\TourCommand;
 use App\Http\Controllers\Api\V1\Commands\UserCommand;
 use App\Http\Controllers\Api\V1\Handlers\ApiHandler;
+use App\Http\Controllers\Api\V1\Handlers\TourHandler;
 use App\Http\Controllers\Api\V1\Handlers\UserHandler;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ApiRequest;
+use App\Http\Requests\Api\TourRequest;
 use App\Http\Requests\Api\UserRequest;
 use Joselfonseca\LaravelTactician\CommandBusInterface;
 
@@ -29,6 +32,15 @@ class ApiController extends Controller
         $this->commandBus->addHandler(UserCommand::class, UserHandler::class);
 
         $user = $this->commandBus->dispatch(new UserCommand($request));
+
+        return $this->responseSuccess($user->data, $user->message);
+    }
+
+    public function tour(TourRequest $request)
+    {
+        $this->commandBus->addHandler(TourCommand::class, TourHandler::class);
+
+        $user = $this->commandBus->dispatch(new TourCommand($request));
 
         return $this->responseSuccess($user->data, $user->message);
     }
