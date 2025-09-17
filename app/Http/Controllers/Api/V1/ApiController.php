@@ -3,15 +3,18 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\Commands\ApiCommand;
+use App\Http\Controllers\Api\V1\Commands\BookingTourCommand;
 use App\Http\Controllers\Api\V1\Commands\TourCommand;
 use App\Http\Controllers\Api\V1\Commands\TourRequireCommand;
 use App\Http\Controllers\Api\V1\Commands\UserCommand;
 use App\Http\Controllers\Api\V1\Handlers\ApiHandler;
+use App\Http\Controllers\Api\V1\Handlers\BookingTourHandler;
 use App\Http\Controllers\Api\V1\Handlers\TourHandler;
 use App\Http\Controllers\Api\V1\Handlers\TourRequireHandler;
 use App\Http\Controllers\Api\V1\Handlers\UserHandler;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ApiRequest;
+use App\Http\Requests\Api\BookingTourRequest;
 use App\Http\Requests\Api\TourRequest;
 use App\Http\Requests\Api\TourRequireRequest;
 use App\Http\Requests\Api\UserRequest;
@@ -53,6 +56,15 @@ class ApiController extends Controller
         $this->commandBus->addHandler(TourRequireCommand::class, TourRequireHandler::class);
 
         $user = $this->commandBus->dispatch(new TourRequireCommand($request));
+
+        return $this->responseSuccess($user->data, $user->message);
+    }
+
+    public function BookingTour(BookingTourRequest $request)
+    {
+        $this->commandBus->addHandler(BookingTourCommand::class, BookingTourHandler::class);
+
+        $user = $this->commandBus->dispatch(new BookingTourCommand($request));
 
         return $this->responseSuccess($user->data, $user->message);
     }

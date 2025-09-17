@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Repositories\BookingTour\BookingTourInterface;
+use App\Repositories\BookingTour\BookingTourRepository;
 use App\Repositories\Tour\TourInterface;
 use App\Repositories\Tour\TourRepository;
 use App\Repositories\TourRequire\TourRequireInterface;
@@ -17,6 +19,7 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(UserInterface::class, UserRepository::class);
         $this->app->bind(TourInterface::class, TourRepository::class);
         $this->app->bind(TourRequireInterface::class, TourRequireRepository::class);
+        $this->app->bind(BookingTourInterface::class, BookingTourRepository::class);
     }
 
     public function boot(): void
