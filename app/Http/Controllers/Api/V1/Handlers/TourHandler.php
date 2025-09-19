@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api\V1\Handlers;
 
 use App\Enum\ResponseStatusCode;
 use App\Exceptions\JsonApiException;
+use App\Helper\CommandDataHelper;
 use App\Http\Resources\TourResource;
 use App\Http\Responses\Api\TourResponse;
 use App\Repositories\Tour\TourInterface;
+use Illuminate\Support\Facades\Storage;
 
 class TourHandler
 {
@@ -17,40 +19,33 @@ class TourHandler
 
     public function handle($command)
     {
-        $request = $command->request;
-        $method = $request->getMethod();
-        $slug = $request->route('slug');
-        if ($method === 'GET') {
-            if ($slug) {
-                switch ($slug) {
-                    case 'all-tour':
-                        return $this->handleFetchAll();
-                    case 'active':
-                        return $this->handleGetAllTourActive();
-                    default:
-                        return $this->handleGetBySlug($slug);
-                }
+        $method = $command->request->getMethod();
+
+        return match ($method) {
+            'GET' => $this->handleGet($command),
+            'POST'   => $this->handleCreate($command),
+            'PUT'    => $this->handleUpdate($command),
+            'DELETE' => $this->handleDelete($command->id),
+            default  => throw new JsonApiException('Method not supported', ResponseStatusCode::PARAMS_INVALID),
+        };
+    }
+
+    public function handleGet($command)
+    {
+        $slug = $command->request->route('slug');
+
+        if ($slug) {
+            switch ($slug) {
+                case 'all-tour':
+                    return $this->handleFetchAll();
+                case 'active':
+                    return $this->handleGetAllTourActive();
+                default:
+                    return $this->handleGetBySlug($slug);
             }
-            if ($command->id) {
-                return $this->handleGetById($command->id);
-            }
-            return $this->handleGetAllTourActive();
         }
 
-        $handlers = [
-            'POST'   => 'handlePost',
-            'PUT'    => 'handleUpdate',
-            'DELETE' => 'handleDelete',
-        ];
-
-        if (!isset($handlers[$method])) {
-            throw new JsonApiException(
-                'Method not supported',
-                ResponseStatusCode::PARAMS_INVALID
-            );
-        }
-
-        return $this->{$handlers[$method]}($command);
+        return $this->handleGetAllTourActive();
     }
 
     private function handleFetchAll(): TourResponse
@@ -59,12 +54,12 @@ class TourHandler
 
         if (!$data) {
             throw new JsonApiException(
-                'No data found',
+                'Failed to get tour information',
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
         return new TourResponse(
-            message: "Success",
+            message: 'Get tour information successfully',
             data: TourResource::collection($data)->toArray(request()),
         );
     }
@@ -75,12 +70,12 @@ class TourHandler
 
         if (!$data) {
             throw new JsonApiException(
-                'No data found',
+                'Failed to get tour information',
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
         return new TourResponse(
-            message: "Success",
+            message: 'Get tour information successfully',
             data: TourResource::collection($data)->toArray(request()),
         );
     }
@@ -91,12 +86,12 @@ class TourHandler
 
         if (!$data) {
             throw new JsonApiException(
-                'No data found',
+                'Failed to get tour information',
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
         return new TourResponse(
-            message: "Success",
+            message: 'Get tour information successfully',
             data: (new TourResource($data))->resolve()
         );
     }
@@ -107,122 +102,245 @@ class TourHandler
 
         if (!$data) {
             throw new JsonApiException(
-                'No data found',
+                'Failed to get tour information',
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
         return new TourResponse(
-            message: "Success",
+            message: 'Get tour information successfully',
             data: (new TourResource($data))->resolve()
         );
     }
 
-    private function handlePost($command): TourResponse
+    private function handleCreate($command): TourResponse
     {
+        $errorMess = [];
+
         $isNameExist = $this->tourInterface->findTourName($command->tour_name);
         $isSlugExist = $this->tourInterface->findTourBySlug($command->slug);
-        if ($isNameExist || $isSlugExist) {
+
+        if ($isNameExist) {
+            $errorMess[] = 'Tour name already exists';
+        }
+
+        if ($isSlugExist) {
+            $errorMess[] = 'Slug already exists';
+        }
+
+        if ($errorMess) {
             throw new JsonApiException(
-                'Tour name or slug already exists',
+                implode(' & ', $errorMess),
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
 
-        $inputData = [
-            'tour_name' => $command->tour_name,
-            'slug' => $command->slug,
-            'price' => $command->price,
-            'sale' => $command->sale,
-            'trip' => $command->trip,
-            'time' => $command->time,
-            'status' => $command->status,
-            'tour_summary' => $command->tour_summary,
-            'tour_program' => $command->tour_program,
-            'tour_policy' => $command->tour_policy,
-            'terms_conditions' => $command->terms_conditions,
-            'images' => $command->images,
-            'thumbnail' => $command->thumbnail,
-            'area' => $command->area,
-            'tour_group' => $command->tour_group,
-            'vehicles' => $command->vehicles,
+        $fields = [
+            'tour_name',
+            'slug',
+            'price',
+            'sale',
+            'trip',
+            'time',
+            'status',
+            'tour_summary',
+            'tour_program',
+            'tour_policy',
+            'terms_conditions',
+            'area',
+            'tour_group',
+            'vehicles',
         ];
-        
+
+        extract($this->processFiles($command->request));
+
+        $inputData = array_filter(
+            CommandDataHelper::extract($fields, $command),
+            fn($value) => !is_null($value)
+        );
+        $inputData['thumbnail'] =  $thumbnail;
+        $inputData['images'] = $images;
+
         $data = $this->tourInterface->createTour($inputData);
+
+        $this->moveFiles($data->id, $thumbnail, $images);
 
         if (!$data) {
             throw new JsonApiException(
-                'Creation failed',
+                'Create tour information failed',
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
 
         return new TourResponse(
-            message: "Creation successful",
+            message: 'Create tour information successful',
             data: (new TourResource($data))->resolve()
         );
     }
 
     private function handleUpdate($command): TourResponse
     {
-        $isNameExist = $this->tourInterface->findTourName($command->tour_name);
-        $isSlugExist = $this->tourInterface->findTourBySlug($command->slug);
-        if (
-            ($isNameExist && $isNameExist->id !== $command->id) ||
-            ($isSlugExist && $isSlugExist->id !== $command->id)
 
-        ) {
+        $id = $command->id;
+        $errorMess = [];
+        $tourExist = $this->tourInterface->findTourById($id);
+
+        if (!$tourExist) {
             throw new JsonApiException(
-                'Tour name or slug already exists',
+                'Tour information is not available',
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
 
-        $inputData = [
-            'tour_name' => $command->tour_name,
-            'slug' => $command->slug,
-            'price' => $command->price,
-            'sale' => $command->sale,
-            'trip' => $command->trip,
-            'time' => $command->time,
-            'status' => $command->status,
-            'tour_summary' => $command->tour_summary,
-            'tour_program' => $command->tour_program,
-            'tour_policy' => $command->tour_policy,
-            'terms_conditions' => $command->terms_conditions,
-            'images' => $command->images,
-            'thumbnail' => $command->thumbnail,
-            'area' => $command->area,
-            'tour_group' => $command->tour_group,
-            'vehicles' => $command->vehicles,
+        $isNameExist = $this->tourInterface->findTourName($command->tour_name);
+        $isSlugExist = $this->tourInterface->findTourBySlug($command->slug);
+
+        if ($isNameExist && $isNameExist->id != $id) {
+            $errorMess[] = 'Tour name already exists';
+        }
+        if ($isSlugExist && $isSlugExist->id != $id) {
+            $errorMess[] = 'Slug already exists';
+        }
+
+        if ($errorMess) {
+            throw new JsonApiException(
+                implode(' & ', $errorMess),
+                ResponseStatusCode::PARAMS_INVALID
+            );
+        }
+
+        $tourOld = $this->tourInterface->findTourById($id);
+
+        if ($command->request->hasFile('thumbnail') && $tourOld->thumbnail) {
+            Storage::disk('public')->delete("tour/{$id}/{$tourOld->thumbnail}");
+        }
+
+        if ($command->request->hasFile('images') && !empty($tourOld->images)) {
+            foreach ($tourOld->images as $image) {
+                Storage::disk('public')->delete("tour/{$id}/{$image->image}");
+            }
+        }
+        if (!$command->thumbnail) {
+            Storage::disk('public')->delete("tour/{$id}/{$tourOld->thumbnail}");
+        }
+
+        if (!$command->images) {
+            foreach ($tourOld->images as $image) {
+                Storage::disk('public')->delete("tour/{$id}/{$image->image}");
+            }
+        }
+
+        extract($this->processFiles($command));
+
+        $fields = [
+            'tour_name',
+            'slug',
+            'price',
+            'sale',
+            'trip',
+            'time',
+            'status',
+            'tour_summary',
+            'tour_program',
+            'tour_policy',
+            'terms_conditions',
+            'images',
+            'thumbnail',
+            'area',
+            'tour_group',
+            'vehicles',
         ];
 
-        $data = $this->tourInterface->updateTour((int) $command->id, $inputData);
+        $inputData = CommandDataHelper::extract($fields, $command);
+
+        if ($command->request->hasFile('thumbnail')) {
+            $inputData['thumbnail'] = $thumbnail;
+        }
+
+        if ($command->request->hasFile('images')) {
+            $inputData['images'] = $images;
+        }
+
+        $data = $this->tourInterface->updateTour((int) $id, $inputData);
+
+        $this->moveFiles($id, $thumbnail, $images);
+
         if (!$data) {
             throw new JsonApiException(
-                'Update failed',
+                'Tour information update failed',
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
 
         return new TourResponse(
-            message: "Update successful",
+            message: 'Tour information updated successfully',
             data: (new TourResource($data))->resolve()
         );
     }
 
     private function handleDelete($command): TourResponse
     {
+        $tourId = (int) $command->id;
 
-        $data = $this->tourInterface->deleteTour((int) $command->id);
-        if (!$data) {
+        $deleted = $this->tourInterface->deleteTour($tourId);
+
+        if (!$deleted) {
             throw new JsonApiException(
-                'Delete failed',
+                'Delete tour information failed',
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
 
+        $directory = "tour/$tourId";
+        if (Storage::disk('public')->exists($directory)) {
+            Storage::disk('public')->deleteDirectory($directory);
+        }
+
         return new TourResponse(
-            message: "Delete successful",
+            message: 'Delete tour information successful'
         );
+    }
+
+    private function processFiles($command): array
+    {
+        $images = [];
+        $thumbnail = null;
+
+        if ($command->request->hasFile('thumbnail')) {
+            $filename = time() . '.' . $command->request->file('thumbnail')->getClientOriginalExtension();
+            $command->request->file('thumbnail')->storeAs('public/tour', $filename);
+            $thumbnail = $filename;
+        }
+
+        if ($command->request->hasFile('images')) {
+            foreach ($command->request->file('images') as $image) {
+                $filename = uniqid() . '.' . $image->getClientOriginalExtension();
+                $image->storeAs('public/tour', $filename);
+                $images[] = $filename;
+            }
+        }
+
+        return compact('thumbnail', 'images');
+    }
+
+    private function moveFiles(int $tourId, ?string $thumbnail, array $images): void
+    {
+        if ($thumbnail) {
+            Storage::disk('public')->move("tour/$thumbnail", "tour/$tourId/$thumbnail");
+        }
+
+        foreach ($images as $img) {
+            Storage::disk('public')->move("tour/$img", "tour/$tourId/$img");
+        }
+    }
+
+    function deleteOldFiles($tour, $id)
+    {
+        if ($tour->thumbnail) {
+            Storage::disk('public')->delete("tour/{$id}/{$tour->thumbnail}");
+        }
+
+        foreach ($tour->images ?? [] as $image) {
+            Storage::disk('public')->delete("tour/{$id}/{$image}");
+        }
     }
 }

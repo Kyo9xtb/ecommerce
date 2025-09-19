@@ -19,6 +19,7 @@ class Tour extends Model
         'price' => 0,
         'sale' => 0,
         'tour_group' => 1,
+        'thumbnail' => null,
     ];
 
     protected $fillable = [
@@ -31,6 +32,7 @@ class Tour extends Model
         'status',
         'area',
         'tour_group',
+        'thumbnail'
     ];
 
     public function detail()

@@ -15,12 +15,10 @@ class TourImage extends Model
     protected $connection = 'mysql';
 
     protected $attributes = [
-        'thumbnail' => null,
         'image' => null,
     ];
     protected $fillable = [
         'tour_id',
-        'thumbnail',
         'image',
     ];
 }

@@ -93,7 +93,7 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
             return $cachedData;
         }
 
-        $result = $this->getAllTourActive()->where('slug', $slug)->first();
+        $result = $this->queryWithRelations()->where('slug', $slug)->first();
 
         $this->setCacheKey($keyCache, $result);
 
@@ -107,36 +107,51 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
 
     public function createTour(array $data): Tour
     {
-        $tour = $this->model->create([
-            'tour_name' => $data['tour_name'] ?? null,
-            'slug' => $data['slug'] ?? null,
-            'price' => $data['price'] ?? 0,
-            'sale' => $data['sale'] ?? 0,
-            'trip' => $data['trip'] ?? null,
-            'time' => $data['time'] ?? null,
-            'status' => $data['status'] ?? 1,
-            'area' => $data['area'] ?? null,
-            'tour_group' => $data['tour_group'] ?? 1,
-        ]);
+        // $tour = $this->model->create([
+        //     'tour_name' => $data['tour_name'] ?? null,
+        //     'slug' => $data['slug'] ?? null,
+        //     'price' => $data['price'] ?? 0,
+        //     'sale' => $data['sale'] ?? 0,
+        //     'trip' => $data['trip'] ?? null,
+        //     'time' => $data['time'] ?? null,
+        //     'status' => $data['status'] ?? 1,
+        //     'area' => $data['area'] ?? null,
+        //     'tour_group' => $data['tour_group'] ?? 1,
+        // ]);
+        // dd($data);
 
-        $tour->detail()->create([
-            'tour_summary' => $data['tour_summary'] ?? null,
-            'tour_program' => $data['tour_program'] ?? null,
-            'tour_policy' => $data['tour_policy'] ?? null,
-            'terms_conditions' => $data['terms_conditions'] ?? null,
-        ]);
+        $tour =  $this->model->create(
+            array_intersect_key($data, array_flip([
+                'tour_name',
+                'slug',
+                'price',
+                'sale',
+                'trip',
+                'time',
+                'status',
+                'area',
+                'tour_group',
+                'thumbnail'
+            ]))
+        );
+
+        $tour->detail()->create(
+            array_intersect_key($data, array_flip([
+                'tour_summary',
+                'tour_program',
+                'tour_policy',
+                'terms_conditions',
+            ]))
+        );
 
         if (!empty($data['images']) && is_array($data['images'])) {
-            foreach ($data['images'] as $img) {
-                $tour->images()->create([
-                    'image' => $img ?? null,
-                    'thumbnail' => $data['thumbnail'] ?? null,
-                ]);
+            $validImages = array_map(function ($image) {
+                return ['image' => $image];
+            }, array_filter($data['images']));
+
+            if (!empty($validImages)) {
+                $tour->images()->createMany($validImages);
             }
-        } else if (!empty($data['thumbnail'])) {
-            $tour->images()->create([
-                'thumbnail' => $data['thumbnail'] ?? null,
-            ]);
         }
 
         if (!empty($data['vehicles']) && is_array($data['vehicles'])) {
@@ -157,48 +172,48 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
         $tour = $this->find($id);
         if (!$tour) return null;
 
-        $tour->update([
-            'tour_name' => $data['tour_name'] ?? null,
-            'slug' => $data['slug'] ?? null,
-            'price' => $data['price'] ?? 0,
-            'sale' => $data['sale'] ?? 0,
-            'trip' => $data['trip'] ?? null,
-            'time' => $data['time'] ?? null,
-            'status' => $data['status'] ?? 1,
-            'area' => $data['area'] ?? null,
-            'tour_group' => $data['tour_group'] ?? 1,
-        ]);
+        $tour->update(
+            array_intersect_key($data, array_flip([
+                'tour_name',
+                'slug',
+                'price',
+                'sale',
+                'trip',
+                'time',
+                'status',
+                'area',
+                'tour_group',
+                'thumbnail'
+            ]))
+        );
 
-        $tour->detail()->updateOrCreate([], [
-            'tour_summary' => $data['tour_summary'] ?? null,
-            'tour_program' => $data['tour_program'] ?? null,
-            'tour_policy' => $data['tour_policy'] ?? null,
-            'terms_conditions' => $data['terms_conditions'] ?? null,
-        ]);
+        $tour->detail()->updateOrCreate([], array_intersect_key($data, array_flip([
+            'tour_summary',
+            'tour_program',
+            'tour_policy',
+            'terms_conditions',
+        ])));
 
-        $tour->images()->delete();
-        $tour->vehicle()->delete();
+        $tour->images()?->delete();
+        $tour->vehicles()?->delete();
 
         if (!empty($data['images']) && is_array($data['images'])) {
-            foreach ($data['images'] as $img) {
-                $tour->images()->create([
-                    'image' => $img ?? null,
-                    'thumbnail' => $data['thumbnail'] ?? null,
-                ]);
+            $validImages = array_map(function ($image) {
+                return ['image' => $image];
+            }, array_filter($data['images']));
+
+            if (!empty($validImages)) {
+                $tour->images()->createMany($validImages);
             }
-        } else if (!empty($data['thumbnail'])) {
-            $tour->images()->create([
-                'thumbnail' => $data['thumbnail'] ?? null,
-            ]);
         }
 
-        if (!empty($data['vehicles']) && is_array($data['vehicles'])) {
-            foreach ($data['vehicles'] as $vehicle) {
-                $tour->vehicles()->create([
-                    'code_vehicle' => $vehicle ?? 1,
-                ]);
-            }
-        }
+        // if (!empty($data['vehicles']) && is_array($data['vehicles'])) {
+        //     foreach ($data['vehicles'] as $vehicle) {
+        //         $tour->vehicles()->create([
+        //             'code_vehicle' => $vehicle ?? 1,
+        //         ]);
+        //     }
+        // }
         $this->clearCache();
         return $tour;
     }
