@@ -32,4 +32,6 @@ Route::prefix('v1')->namespace('V1')->group(function () {
     Route::match(['get', 'post', 'put', 'delete'], '/tour-require', [ApiController::class, 'TourRequire']);
     Route::match(['get', 'post', 'put', 'delete'], '/booking-tour', [ApiController::class, 'BookingTour']);
     Route::match(['get', 'post', 'put', 'delete'], '/contact', [ApiController::class, 'ContactCustomer']);
+    Route::get('/news/{slug?}', [ApiController::class, 'News']);
+    Route::match(['post', 'put', 'delete'], '/news', [ApiController::class, 'News']);
 });

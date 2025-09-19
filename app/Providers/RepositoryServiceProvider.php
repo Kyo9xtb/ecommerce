@@ -6,6 +6,8 @@ use App\Repositories\BookingTour\BookingTourInterface;
 use App\Repositories\BookingTour\BookingTourRepository;
 use App\Repositories\ContactCustomer\ContactCustomerInterface;
 use App\Repositories\ContactCustomer\ContactCustomerRepository;
+use App\Repositories\News\NewsInterface;
+use App\Repositories\News\NewsRepository;
 use App\Repositories\Tour\TourInterface;
 use App\Repositories\Tour\TourRepository;
 use App\Repositories\TourRequire\TourRequireInterface;
@@ -23,6 +25,7 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(TourRequireInterface::class, TourRequireRepository::class);
         $this->app->bind(BookingTourInterface::class, BookingTourRepository::class);
         $this->app->bind(ContactCustomerInterface::class, ContactCustomerRepository::class);
+        $this->app->bind(NewsInterface::class, NewsRepository::class);
     }
 
     public function boot(): void
