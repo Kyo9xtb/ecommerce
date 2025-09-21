@@ -33,7 +33,7 @@ class User extends Model
     ];
 
     protected $connection = 'mysql';
-    protected $table = 'user';
+    protected $table = 'users';
     protected $primaryKey = 'id';
     public $timestamps = true;
 }

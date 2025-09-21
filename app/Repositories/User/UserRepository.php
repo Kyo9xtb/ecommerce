@@ -23,7 +23,10 @@ class UserRepository extends AbstractBaseRepository implements UserInterface
         return $result;
     }
 
-    
+    public function findUserActive($id)
+    {
+        return $this->model->where('id', $id)->where('status', 1)->get();
+    }
 
     private function clearCache()
     {

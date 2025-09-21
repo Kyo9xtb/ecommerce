@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Repositories\BookingTour\BookingTourInterface;
 use App\Repositories\BookingTour\BookingTourRepository;
+use App\Repositories\Cart\CartInterface;
+use App\Repositories\Cart\CartRepository;
 use App\Repositories\ContactCustomer\ContactCustomerInterface;
 use App\Repositories\ContactCustomer\ContactCustomerRepository;
 use App\Repositories\News\NewsInterface;
@@ -26,6 +28,7 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(BookingTourInterface::class, BookingTourRepository::class);
         $this->app->bind(ContactCustomerInterface::class, ContactCustomerRepository::class);
         $this->app->bind(NewsInterface::class, NewsRepository::class);
+        $this->app->bind(CartInterface::class, CartRepository::class);
     }
 
     public function boot(): void
