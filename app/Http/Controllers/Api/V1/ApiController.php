@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Commands\BookingTourCommand;
 use App\Http\Controllers\Api\V1\Commands\CartCommand;
 use App\Http\Controllers\Api\V1\Commands\ContactCustomerCommand;
 use App\Http\Controllers\Api\V1\Commands\NewsCommand;
+use App\Http\Controllers\Api\V1\Commands\PassengerInformationTourCommand;
 use App\Http\Controllers\Api\V1\Commands\TourCommand;
 use App\Http\Controllers\Api\V1\Commands\TourRequireCommand;
 use App\Http\Controllers\Api\V1\Commands\UserCommand;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Api\V1\Handlers\BookingTourHandler;
 use App\Http\Controllers\Api\V1\Handlers\CartHandler;
 use App\Http\Controllers\Api\V1\Handlers\ContactCustomerHandler;
 use App\Http\Controllers\Api\V1\Handlers\NewsHandler;
+use App\Http\Controllers\Api\V1\Handlers\PassengerInformationTourHandler;
 use App\Http\Controllers\Api\V1\Handlers\TourHandler;
 use App\Http\Controllers\Api\V1\Handlers\TourRequireHandler;
 use App\Http\Controllers\Api\V1\Handlers\UserHandler;
@@ -24,6 +26,7 @@ use App\Http\Requests\Api\BookingTourRequest;
 use App\Http\Requests\Api\CartRequest;
 use App\Http\Requests\Api\ContactCustomerRequest;
 use App\Http\Requests\Api\NewsRequest;
+use App\Http\Requests\Api\PassengerInformationTourRequest;
 use App\Http\Requests\Api\TourRequest;
 use App\Http\Requests\Api\TourRequireRequest;
 use App\Http\Requests\Api\UserRequest;
@@ -96,11 +99,20 @@ class ApiController extends Controller
         return $this->responseSuccess($command->data, $command->message);
     }
 
-     public function Cart(CartRequest $request)
+    public function Cart(CartRequest $request)
     {
         $this->commandBus->addHandler(CartCommand::class, CartHandler::class);
 
         $command = $this->commandBus->dispatch(new CartCommand($request));
+
+        return $this->responseSuccess($command->data, $command->message);
+    }
+
+     public function PassengerInformationTour(PassengerInformationTourRequest $request)
+    {
+        $this->commandBus->addHandler(PassengerInformationTourCommand::class, PassengerInformationTourHandler::class);
+
+        $command = $this->commandBus->dispatch(new PassengerInformationTourCommand($request));
 
         return $this->responseSuccess($command->data, $command->message);
     }
