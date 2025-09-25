@@ -25,7 +25,7 @@ class TourHandler
             'GET' => $this->handleGet($command),
             'POST'   => $this->handleCreate($command),
             'PUT'    => $this->handleUpdate($command),
-            'DELETE' => $this->handleDelete($command->id),
+            'DELETE' => $this->handleDelete((int) $command->id),
             default  => throw new JsonApiException('Method not supported', ResponseStatusCode::PARAMS_INVALID),
         };
     }
@@ -33,7 +33,6 @@ class TourHandler
     public function handleGet($command)
     {
         $slug = $command->request->route('slug');
-
         if ($slug) {
             switch ($slug) {
                 case 'all-tour':
@@ -45,7 +44,7 @@ class TourHandler
             }
         }
 
-        return $this->handleGetAllTourActive();
+        return $this->handleFetchAll();
     }
 
     private function handleFetchAll(): TourResponse
@@ -148,11 +147,11 @@ class TourHandler
             'terms_conditions',
             'area',
             'tour_group',
+            'departure_schedule',
             'vehicles',
+            'guests',
         ];
-
-        extract($this->processFiles($command->request));
-
+        extract($this->processFiles($command));
         $inputData = array_filter(
             CommandDataHelper::extract($fields, $command),
             fn($value) => !is_null($value)
@@ -182,7 +181,7 @@ class TourHandler
 
         $id = $command->id;
         $errorMess = [];
-        $tourExist = $this->tourInterface->findTourById($id);
+        $tourExist = $this->tourInterface->findTourById((int) $id);
 
         if (!$tourExist) {
             throw new JsonApiException(
@@ -243,11 +242,11 @@ class TourHandler
             'tour_program',
             'tour_policy',
             'terms_conditions',
-            'images',
-            'thumbnail',
             'area',
             'tour_group',
             'vehicles',
+            'departure_schedule',
+            'guests',
         ];
 
         $inputData = CommandDataHelper::extract($fields, $command);
@@ -277,11 +276,10 @@ class TourHandler
         );
     }
 
-    private function handleDelete($command): TourResponse
+    private function handleDelete($id): TourResponse
     {
-        $tourId = (int) $command->id;
 
-        $deleted = $this->tourInterface->deleteTour($tourId);
+        $deleted = $this->tourInterface->deleteTour($id);
 
         if (!$deleted) {
             throw new JsonApiException(
@@ -290,7 +288,7 @@ class TourHandler
             );
         }
 
-        $directory = "tour/$tourId";
+        $directory = "tour/$id";
         if (Storage::disk('public')->exists($directory)) {
             Storage::disk('public')->deleteDirectory($directory);
         }

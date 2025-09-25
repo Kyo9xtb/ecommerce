@@ -34,7 +34,16 @@ class TourResource extends JsonResource
                 'name_vehicle' => null,
             ];
         })->filter()->values();
-        
+
+        $guests = $this->guests->map(function ($guest) {
+            if (!$guest->guest_code) {
+                return null;
+            }
+            return [
+                'guest_code' => $guest->guest_code,
+                'guests_name' => null,
+            ];
+        })->filter()->values();
         return [
             'id' => $this->id,
             'tour_name' => $this->tour_name ?? null,
@@ -46,6 +55,7 @@ class TourResource extends JsonResource
             'sale' => $this->sale ?? 0,
             'price' => $this->price - ($this->price * ($this->sale / 100)) ?? 0,
             'trip' => $this->trip ?? null,
+            'departure_schedule' => $this->departure_schedule ?? null,
             'time' => $this->time ?? null,
             'status' => $this->status ?? 1,
             'tour_summary' => $this->detail->tour_summary ?? null,
@@ -53,6 +63,7 @@ class TourResource extends JsonResource
             'tour_policy' => $this->detail->tour_policy ?? null,
             'terms_conditions' => $this->detail->terms_conditions ?? null,
             'vehicles' => $vehicles->isEmpty() ? null : $vehicles,
+            'guests' => $guests->isEmpty() ? null : $guests,
             'thumbnail' => $this->thumbnail
                 ? $basePath . $this->thumbnail
                 : null,

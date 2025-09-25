@@ -26,5 +26,7 @@ use AllowDynamicProperties;
         $this->vehicles = $request->vehicles;
         $this->area = $request->area;
         $this->tour_group = $request->tour_group;
+        $this->departure_schedule = $request->departure_schedule;
+        $this->guests = $request->guests;
     }
 }

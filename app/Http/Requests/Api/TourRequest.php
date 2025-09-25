@@ -8,6 +8,7 @@ class TourRequest extends Request
 {
     public function rules(): array
     {
+        return [];
         $method = request()->method();
 
         if ($method === 'DELETE') {

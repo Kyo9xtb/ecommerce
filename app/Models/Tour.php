@@ -29,6 +29,7 @@ class Tour extends Model
         'sale',
         'trip',
         'time',
+        'departure_schedule',
         'status',
         'area',
         'tour_group',
@@ -48,5 +49,9 @@ class Tour extends Model
     public function vehicles()
     {
         return $this->hasMany(TourVehicle::class, 'tour_id', 'id');
+    }
+    public function guests()
+    {
+        return $this->hasMany(TourGuest::class, 'tour_id', 'id');
     }
 }

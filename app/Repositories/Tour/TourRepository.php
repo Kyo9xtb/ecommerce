@@ -107,19 +107,6 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
 
     public function createTour(array $data): Tour
     {
-        // $tour = $this->model->create([
-        //     'tour_name' => $data['tour_name'] ?? null,
-        //     'slug' => $data['slug'] ?? null,
-        //     'price' => $data['price'] ?? 0,
-        //     'sale' => $data['sale'] ?? 0,
-        //     'trip' => $data['trip'] ?? null,
-        //     'time' => $data['time'] ?? null,
-        //     'status' => $data['status'] ?? 1,
-        //     'area' => $data['area'] ?? null,
-        //     'tour_group' => $data['tour_group'] ?? 1,
-        // ]);
-        // dd($data);
-
         $tour =  $this->model->create(
             array_intersect_key($data, array_flip([
                 'tour_name',
@@ -131,7 +118,8 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
                 'status',
                 'area',
                 'tour_group',
-                'thumbnail'
+                'thumbnail',
+                'departure_schedule'
             ]))
         );
 
@@ -155,10 +143,32 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
         }
 
         if (!empty($data['vehicles']) && is_array($data['vehicles'])) {
-            foreach ($data['vehicles'] as $vehicle) {
-                $tour->vehicles()->create([
-                    'code_vehicle' => $vehicle ?? 1,
-                ]);
+            $validVehicles = array_map(function ($vehicle) {
+                return ['code_vehicle' => (int)$vehicle['code_vehicle']];
+            }, array_filter($data['vehicles']));
+
+            if (!empty($validVehicles)) {
+                $tour->vehicles()->createMany($validVehicles);
+            }
+        }
+
+        if (!empty($data['vehicles']) && is_array($data['vehicles'])) {
+            $validVehicles = array_map(function ($vehicle) {
+                return ['code_vehicle' => (int)$vehicle['code_vehicle']];
+            }, array_filter($data['vehicles']));
+
+            if (!empty($validVehicles)) {
+                $tour->vehicles()->createMany($validVehicles);
+            }
+        }
+
+        if (!empty($data['guests']) && is_array($data['guests'])) {
+            $validGuests = array_map(function ($guest) {
+                return ['guest_code' => (int) $guest['guest_code']];
+            }, array_filter($data['guests']));
+
+            if (!empty($validGuests)) {
+                $tour->guests()->createMany($validGuests);
             }
         }
 
@@ -171,7 +181,6 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
     {
         $tour = $this->find($id);
         if (!$tour) return null;
-
         $tour->update(
             array_intersect_key($data, array_flip([
                 'tour_name',
@@ -183,7 +192,8 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
                 'status',
                 'area',
                 'tour_group',
-                'thumbnail'
+                'thumbnail',
+                'departure_schedule',
             ]))
         );
 
@@ -194,10 +204,11 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
             'terms_conditions',
         ])));
 
-        $tour->images()?->delete();
         $tour->vehicles()?->delete();
+        $tour->guests()?->delete();
 
         if (!empty($data['images']) && is_array($data['images'])) {
+            $tour->images()?->delete();
             $validImages = array_map(function ($image) {
                 return ['image' => $image];
             }, array_filter($data['images']));
@@ -207,13 +218,28 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
             }
         }
 
-        // if (!empty($data['vehicles']) && is_array($data['vehicles'])) {
-        //     foreach ($data['vehicles'] as $vehicle) {
-        //         $tour->vehicles()->create([
-        //             'code_vehicle' => $vehicle ?? 1,
-        //         ]);
-        //     }
-        // }
+        if (!empty($data['vehicles']) && is_array($data['vehicles'])) {
+
+            $validVehicles = array_map(function ($vehicle) {
+                return ['code_vehicle' => (int)$vehicle['code_vehicle']];
+            }, array_filter($data['vehicles']));
+
+            if (!empty($validVehicles)) {
+                $tour->vehicles()->createMany($validVehicles);
+            }
+        }
+
+        if (!empty($data['guests']) && is_array($data['guests'])) {
+
+            $validGuests = array_map(function ($guest) {
+                return ['guest_code' => (int) $guest['guest_code']];
+            }, array_filter($data['guests']));
+
+            if (!empty($validGuests)) {
+                $tour->guests()->createMany($validGuests);
+            }
+        }
+
         $this->clearCache();
         return $tour;
     }
@@ -223,8 +249,11 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
         $tour = $this->find($id);
         if (!$tour) return false;
 
-        $tour->images()->delete();
-        $tour->detail()->delete();
+        $tour->images()?->delete();
+        $tour->detail()?->delete();
+        $tour->guests()?->delete();
+        $tour->vehicles()?->delete();
+
         $tour->delete();
 
         $this->clearCache();
@@ -291,6 +320,6 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
 
     private function queryWithRelations()
     {
-        return $this->model->with(['detail', 'images', 'vehicles']);
+        return $this->model->with(['detail', 'images', 'vehicles', 'guests']);
     }
 }
