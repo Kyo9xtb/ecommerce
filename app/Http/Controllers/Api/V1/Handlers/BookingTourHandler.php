@@ -20,17 +20,29 @@ class BookingTourHandler
     {
         $method = $command->request->getMethod();
         return match ($method) {
-            'GET' => match (true) {
-                isset($command->id)   => $this->handleGetBookingById($command->id),
-                isset($command->date) => $this->handleGetBookingByDate($command->date),
-                isset($command->month) => $this->handleGetBookingByMonth($command->month),
-                default               => $this->handleFetchAllBooking(),
-            },
+            'GET' => $this->handleGet($command),
             'POST'   => $this->handleWrite($command, 'createBookingTour', 'Create success'),
-            'PUT'    => $this->handleWrite($command, 'updateBookingTour', 'Update success', $command->id),
+            'PUT'    => $this->handleWrite($command, 'updateBookingTour', 'Update success', (int) $command->id),
             'DELETE' => $this->handleDelete($command->id),
             default  => throw new JsonApiException('Method not supported', ResponseStatusCode::PARAMS_INVALID),
         };
+    }
+
+    private function handleGet($command)
+    {
+        if (isset($command->id)) {
+            return $this->handleGetBookingById((int) $command->id);
+        }
+
+        if (isset($command->date)) {
+            return $this->handleGetBookingByDate($command->date);
+        }
+
+        if (isset($command->month)) {
+            return $this->handleGetBookingByMonth($command->month);
+        }
+
+        return $this->handleFetchAllBooking();
     }
 
     private function handleFetchAllBooking(): BookingTourResponse
@@ -123,6 +135,7 @@ class BookingTourHandler
 
         $inputData = CommandDataHelper::extract($fields, $command);
 
+        // $data = $this->bookingTourInterface->updateBookingTour((int) $id, $inputData);
         $data = $id
             ? $this->bookingTourInterface->{$action}((int) $id, $inputData)
             : $this->bookingTourInterface->{$action}($inputData);

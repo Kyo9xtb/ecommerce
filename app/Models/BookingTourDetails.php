@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class BookingTourDetails extends Model
 {
     use HasFactory;
-    
+
     protected $table = 'booking_details';
     protected $primaryKey = 'id';
     public $timestamps = false;
@@ -28,4 +28,8 @@ class BookingTourDetails extends Model
         'quantity',
         'departure_date',
     ];
+    public function tour()
+    {
+        return $this->belongsTo(Tour::class, 'tour_id', 'id');
+    }
 }

@@ -18,6 +18,7 @@ class BookingTour extends Model
         'user_id' => null,
         'total_price' => 0,
         'deposit' => 0,
+        'discount_code' => 0,
         'status' => 1,
         'currency' => 'VND',
         'payment_method' => null,
@@ -33,6 +34,7 @@ class BookingTour extends Model
         'status',
         'total_price',
         'deposit',
+        'discount_code',
         'currency',
         'payment_method',
     ];

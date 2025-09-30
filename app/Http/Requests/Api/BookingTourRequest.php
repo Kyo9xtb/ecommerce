@@ -8,7 +8,7 @@ class BookingTourRequest extends Request
 {
     public function rules(): array
     {
-        return [];
+        // return [];
         $method = request()->method();
 
         if ($method === 'DELETE') {
@@ -22,19 +22,14 @@ class BookingTourRequest extends Request
         }
 
         $rules = [
-            'tour_name' => ['required', 'string'],
-            'slug' => ['required', 'string'],
-            'area' => ['required', 'string'],
-            'price' => ['required', 'numeric'],
-            'sale' => ['nullable', 'numeric'],
-            'trip' => ['nullable', 'string'],
-            'time' => ['nullable', 'string'],
-            'tour_summary' => ['nullable', 'string'],
-            'tour_program' => ['nullable', 'string'],
-            'tour_policy' => ['nullable', 'string'],
-            'terms_conditions' => ['nullable', 'string'],
-            'status' => ['nullable', 'int', 'in:0,1'], // 0: Inactive, 1: Active
-            'tour_group' => ['required', 'int', 'in:1,2'], // 1: Domestic, 2: International
+            'user_id' => ['nullable', 'int'],
+            'full_name' => ['required', 'string'],
+            'email' => ['required', 'string'],
+            'phone' => ['required', 'string'],
+            'address' => ['required', 'string'],
+            'total_price' => ['required', 'numeric'],
+            'deposit' => ['nullable', 'numeric'],
+            'currency' => ['nullable', 'string'],
         ];
 
         if ($method === 'PUT') {
@@ -47,26 +42,11 @@ class BookingTourRequest extends Request
     public function messages(): array
     {
         return [
-            'tour_name.required' => __('tour_name.missing_required_parameter'),
-            'slug.required' => __('slug.missing_required_parameter'),
-            'price.required' => __('price.missing_required_parameter'),
-            'tour_group.required' => __('tour_group.missing_required_parameter'),
-            'area.required' => __('area.missing_required_parameter'),
-
-            'price.numeric' => __('validation.price_must_be_numeric'),
-            'sale.numeric' => __('validation.sale_must_be_numeric'),
-
-            'trip.string' => __('validation.trip_must_be_string'),
-            'time.string' => __('validation.time_must_be_string'),
-
-            'tour_summary.string' => __('validation.tour_summary_must_be_string'),
-            'tour_program.string' => __('validation.tour_program_must_be_string'),
-            'tour_policy.string' => __('validation.tour_policy_must_be_string'),
-            'terms_conditions.string' => __('validation.terms_conditions_must_be_string'),
-
-            'status.int' => __('validation.status_must_be_integer'),
-            'status.in' => __('validation.status_must_be_0_or_1'),
-            'tour_group.in' => __('validation.status_must_be_1_or_2'),
+            'full_name.required' => __('full_name.missing_required_parameter'),
+            'email.required' => __('email.missing_required_parameter'),
+            'phone.required' => __('phone.missing_required_parameter'),
+            'address.required' => __('address.missing_required_parameter'),
+            'total_price.required' => __('total_price.missing_required_parameter'),
         ];
     }
 }
