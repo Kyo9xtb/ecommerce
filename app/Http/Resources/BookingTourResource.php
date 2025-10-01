@@ -22,10 +22,11 @@ class BookingTourResource extends JsonResource
             $basePath = "tour/{$detail->tour_id}/";
 
             return [
+                'id'=> $detail->id,
                 'tour_id' => $detail->tour_id,
                 'tour_name' => $detail->tour->tour_name ?? null,
                 'guest_id' => $detail->guest_id,
-                'price' => $detail->price ?? 0,
+                'price' => +$detail->price ?? 0,
                 'quantity' => $detail->quantity ?? 0,
                 'total_price' => $detail->price * $detail->quantity ?? 0,
                 'thumbnail_url' => $detail->tour->thumbnail
@@ -44,8 +45,8 @@ class BookingTourResource extends JsonResource
             'email' => $this->email ?? null,
             'phone' => $this->phone ?? null,
             'address' => $this->address ?? 0,
-            'total_price' => $this->total_price ?? 0,
-            'deposit' => $this->deposit ?? 0,
+            'total_price' => +$this->total_price ?? 0,
+            'deposit' => +$this->deposit ?? 0,
             'unpaid' => $this->total_price - $this->deposit ?? 0,
             'discount_code' => $this->discount_code ?? 0,
             'currency' => $this->currency ?? null,
