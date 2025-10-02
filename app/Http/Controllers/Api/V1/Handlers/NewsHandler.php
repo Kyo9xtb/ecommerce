@@ -8,6 +8,7 @@ use App\Helper\CommandDataHelper;
 use App\Http\Resources\NewsResource;
 use App\Http\Responses\Api\NewsResponse;
 use App\Repositories\News\NewsInterface;
+use Illuminate\Support\Facades\Storage;
 
 class NewsHandler
 {
@@ -17,10 +18,8 @@ class NewsHandler
 
     public function handle($command)
     {
-        $method = $command->request->getMethod();
-
-        return match ($method) {
-            'GET' => $this->handleGet($command),
+        return match ($command->request->getMethod()) {
+            'GET'    => $this->handleGet($command),
             'POST'   => $this->handleCreate($command),
             'PUT'    => $this->handleUpdate($command),
             'DELETE' => $this->handleDelete($command->id),
@@ -30,13 +29,9 @@ class NewsHandler
 
     private function handleGet($command)
     {
-        $slug = $command->request->route('slug');
-
-        if ($slug) {
-            return $this->findNewsBySlug($slug);
-        }
-
-        return $this->fetchAll();
+        return $command->request->route('slug')
+            ? $this->findNewsBySlug($command->request->route('slug'))
+            : $this->fetchAll();
     }
 
     private function fetchAll(): NewsResponse
@@ -44,16 +39,10 @@ class NewsHandler
         $result = $this->newsInterface->fetchAll();
 
         if (!$result) {
-            throw new JsonApiException(
-                'No data found',
-                ResponseStatusCode::PARAMS_INVALID
-            );
+            throw new JsonApiException('No data found', ResponseStatusCode::PARAMS_INVALID);
         }
 
-        return new NewsResponse(
-            message: "Success",
-            data: NewsResource::collection($result)->toArray(request()),
-        );
+        return new NewsResponse("Success", NewsResource::collection($result)->toArray(request()));
     }
 
     private function findNewsBySlug($slug)
@@ -61,99 +50,58 @@ class NewsHandler
         $result = $this->newsInterface->findNewsBySlug($slug);
 
         if (!$result) {
-            throw new JsonApiException(
-                'No data found',
-                ResponseStatusCode::PARAMS_INVALID
-            );
+            throw new JsonApiException('No data found', ResponseStatusCode::PARAMS_INVALID);
         }
 
-        return new NewsResponse(
-            message: "Success",
-            data: (new NewsResource($result))->resolve(),
-        );
+        return new NewsResponse("Success", (new NewsResource($result))->resolve());
     }
 
     private function handleCreate($command): NewsResponse
     {
-       $file =  $command->request->file('thumbnail');
-       dd($file);
-        $titleExist = $this->newsInterface->findNewsByTitle($command->title);
-        $slugExist = $this->newsInterface->findNewsBySlug($command->slug);
+        $this->validateUniqueNews($command);
 
-        if ($titleExist || $slugExist) {
-            throw new JsonApiException(
-                'Title or slug already exists',
-                ResponseStatusCode::PARAMS_INVALID
-            );
-        }
+        extract($this->processFiles($command));
 
-        $fields = [
-            'full_name',
-            'email',
-            'phone',
-            'contact_content',
-            'contact_result',
-            'status',
-            'title'
-        ];
+        $fields = ['title', 'slug', 'meta_title', 'description', 'meta_description', 'content', 'author', 'status'];
+        $inputData = array_filter(CommandDataHelper::extract($fields, $command), fn($v) => !is_null($v));
 
-        $inputData = array_filter(
-            CommandDataHelper::extract($fields, $command),
-            fn($value) => !is_null($value)
-        );
+        $inputData['thumbnail'] = $thumbnail;
 
-        $inputData['thumbnail'] = 'thumbnail.png';
-
-        $result =  $this->newsInterface->createNews($inputData);
+        $result = $this->newsInterface->createNews($inputData);
 
         if (!$result) {
-            throw new JsonApiException(
-                'No data found',
-                ResponseStatusCode::PARAMS_INVALID
-            );
+            throw new JsonApiException('Create news failed', ResponseStatusCode::PARAMS_INVALID);
         }
 
-        return new NewsResponse(
-            message: "Success",
-            data: (new NewsResource($result))->resolve(),
-        );
+        $this->moveFiles($result->id, $thumbnail);
+
+        return new NewsResponse('Create news success', (new NewsResource($result))->resolve());
     }
 
-    private function handleUpdate($command)
+    private function handleUpdate($command): NewsResponse
     {
-        $newsExist = $this->newsInterface->findNewsById($command->id);
+        $idReq = (int) $command->id;
+        $newsExist = $this->newsInterface->findNewsById($idReq);
+
         if (!$newsExist) {
-            throw new JsonApiException(
-                'News already exists',
-                ResponseStatusCode::PARAMS_INVALID
-            );
+            throw new JsonApiException('News not found', ResponseStatusCode::PARAMS_INVALID);
         }
 
-        $titleExist = $this->newsInterface->findNewsByTitle($command->title);
-        $slugExist = $this->newsInterface->findNewsBySlug($command->slug);
+        $this->validateUniqueNews($command, $idReq);
 
-        if (($titleExist && $titleExist->id !== $command->id) || ($slugExist &&  $slugExist->id !== $command->id)) {
-            throw new JsonApiException(
-                'Title or slug already exists',
-                ResponseStatusCode::PARAMS_INVALID
-            );
+        if ($newsExist->thumbnail && ($command->request->hasFile('thumbnail') || !$command->thumbnail)) {
+            $this->deleteOldFiles($newsExist, $idReq);
         }
 
-        $fields = [
-            'full_name',
-            'email',
-            'phone',
-            'contact_content',
-            'contact_result',
-            'status',
-            'title'
-        ];
+        extract($this->processFiles($command));
+
+        $fields = ['title', 'slug', 'meta_title', 'description', 'meta_description', 'content', 'author', 'status'];
 
         $inputData = CommandDataHelper::extract($fields, $command);
+        $inputData['thumbnail'] = $thumbnail;
 
-        $inputData['thumbnail'] = 'thumbnail.png';
+        $result = $this->newsInterface->updateNews($idReq, $inputData);
 
-        $result = $this->newsInterface->updateNews($command->id, $inputData);
 
         if (!$result) {
             throw new JsonApiException(
@@ -161,28 +109,73 @@ class NewsHandler
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
+        $this->moveFiles($idReq, $thumbnail);
 
-        return new NewsResponse(
-            message: "Update success",
-            data: (new NewsResource($result))->resolve(),
-        );
+        return new NewsResponse("Update news success", (new NewsResource($result))->resolve());
     }
 
-    private function handleDelete($id)
+    private function handleDelete($id): NewsResponse
     {
-
         $result = $this->newsInterface->deleteNews($id);
 
         if (!$result) {
-            throw new JsonApiException(
-                'Delete failed',
-                ResponseStatusCode::PARAMS_INVALID
-            );
+            throw new JsonApiException('Delete failed', ResponseStatusCode::PARAMS_INVALID);
         }
 
-        return new NewsResponse(
-            message: "Delete success",
-            data: (new NewsResource($result))->resolve(),
-        );
+        $directory = "news/$id";
+        if (Storage::disk('public')->exists($directory)) {
+            Storage::disk('public')->deleteDirectory($directory);
+        }
+
+        return new NewsResponse("Delete success");
+    }
+
+    private function processFiles($command): array
+    {
+        $thumbnail = null;
+
+        if ($command->request->hasFile('thumbnail')) {
+            $filename = time() . '.' . $command->request->file('thumbnail')->getClientOriginalExtension();
+            $command->request->file('thumbnail')->storeAs('public/news', $filename);
+            $thumbnail = $filename;
+        }
+
+        return compact('thumbnail');
+    }
+
+    private function moveFiles(int $newsId, ?string $thumbnail): void
+    {
+        if ($thumbnail) {
+            Storage::disk('public')->move("news/$thumbnail", "news/$newsId/$thumbnail");
+        }
+    }
+
+    private function deleteOldFiles($news, int $id): void
+    {
+        if ($news->thumbnail) {
+            $path = "news/{$id}/{$news->thumbnail}";
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+        }
+    }
+
+    private function validateUniqueNews($command, ?int $excludeId = null): void
+    {
+        $errors = [];
+
+        $titleExist = $this->newsInterface->findNewsByTitle($command->title);
+        $slugExist  = $this->newsInterface->findNewsBySlug($command->slug);
+
+        if ($titleExist && $titleExist->id !== $excludeId) {
+            $errors[] = 'Title news already exists';
+        }
+        if ($slugExist && $slugExist->id !== $excludeId) {
+            $errors[] = 'Slug already exists';
+        }
+
+        if ($errors) {
+            throw new JsonApiException(implode(' & ', $errors), ResponseStatusCode::PARAMS_INVALID);
+        }
     }
 }
