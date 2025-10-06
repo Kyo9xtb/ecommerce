@@ -8,29 +8,18 @@ class TourRequireRequest extends Request
 {
     public function rules(): array
     {
-        $method = request()->method();
-
-        if ($method === 'DELETE') {
-            return [
-                'id' => ['required', 'int'],
-            ];
-        }
-
-        if (!in_array($method, ['POST', 'PUT'], true)) {
-            return [];
-        }
-
-        $rules = [
+        $commonRules = [
             'full_name' => ['required', 'string'],
             'nationality' => ['required', 'string'],
             'email' => ['required', 'email'],
             'phone' => ['required', 'string'],
-            'feedback' => ['required', 'int', 'in:1,2'],
+            'feedback_method' => ['required', 'int', 'in:1,2'],
+            'tour_dates' => ['required', 'int', 'in:1,2'],
             'expected_destination' => ['required', 'string'],
             'departure_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
-            'expected_month' => ['nullable', 'string'],
-            'expected_year' => ['nullable', 'string'],
+            'expected_month' => ['nullable', 'int'],
+            'expected_year' => ['nullable', 'int'],
             'number_days' => ['nullable', 'int'],
             'vehicle' => ['nullable', 'numeric'],
             'adult' => ['nullable', 'int', 'min:1'],
@@ -39,14 +28,20 @@ class TourRequireRequest extends Request
             'number_rooms' => ['nullable', 'int'],
             'hotel_standards' => ['nullable', 'int'],
             'note' => ['nullable', 'string'],
-            'status' => ['nullable', 'int', 'in:0,1'], // 0: Inactive, 1: Active
+            'status' => ['nullable', 'int', 'in:0,1,2,3,4,5,999'],
+            'tour_id' => ['nullable', 'int'],
+            'price' => ['nullable', 'numeric'],
+            'tour_program' => ['nullable', 'string'],
+            'tour_policy' => ['nullable', 'string'],
+            'terms_conditions' => ['nullable', 'string'],
         ];
 
-        if ($method === 'PUT') {
-            $rules['id'] = ['required', 'int'];
-        }
-
-        return $rules;
+        return match ($this->method()) {
+            'DELETE' => ['id' => ['required', 'integer']],
+            'POST'   => $commonRules,
+            'PUT'    => array_merge($commonRules, ['id' => ['required', 'integer']]),
+            default  => [],
+        };
     }
 
     public function messages(): array

@@ -14,6 +14,7 @@ use AllowDynamicProperties;
         $this->nationality = $request->nationality;
         $this->email = $request->email;
         $this->phone = $request->phone;
+        $this->tour_dates = $request->tour_dates;
         $this->expected_destination = $request->expected_destination;
         $this->departure_date = $request->departure_date;
         $this->status = $request->status;
@@ -29,5 +30,9 @@ use AllowDynamicProperties;
         $this->hotel_standards = $request->hotel_standards;
         $this->note = $request->note;
         $this->feedback = $request->feedback;
+        $this->price = $request->price;
+        $this->tour_program = $request->tour_program;
+        $this->tour_policy = $request->tour_policy;
+        $this->terms_conditions = $request->terms_conditions;
     }
 }

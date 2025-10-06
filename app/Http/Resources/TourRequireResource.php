@@ -16,11 +16,13 @@ class TourRequireResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'tour_code' => $this->tour_code?? null,
             'full_name' => $this->full_name ?? null,
             'nationality' => $this->nationality ?? null,
-            'email' => +$this->email ?? null,
+            'email' => $this->email ?? null,
             'phone' => $this->phone ?? null,
             'expected_destination' => $this->expected_destination ?? null,
+            'tour_dates' => $this->tour_dates ?? null,
             'departure_date' => $this->departure_date ?? null,
             'end_date' => $this->end_date ?? null,
             'expected_month' => $this->expected_month ?? null,
@@ -34,8 +36,12 @@ class TourRequireResource extends JsonResource
             'hotel_standards' => $this->hotel_standards ?? null,
             'expected_destination' => $this->expected_destination ?? null,
             'note' => $this->note ?? null,
-            'feedback' => $this->feedback ?? null,
+            'feedback_method' => $this->feedback_method ?? null,
             'status' => $this->status ?? 1,
+            'price' => $this->detail->price?? 0,
+            'tour_program' => $this->detail->tour_program ?? null,
+            'tour_policy' => $this->detail->tour_policy ?? null,
+            'terms_conditions' => $this->detail->terms_conditions ?? null,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
         ];

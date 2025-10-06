@@ -4,11 +4,11 @@ namespace App\Repositories\TourRequire;
 
 use App\Core\AbstractBaseRepository;
 use App\Models\TourRequire;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Redis;
+use App\Trait\HasModelCache;
 
 class TourRequireRepository extends AbstractBaseRepository implements TourRequireInterface
 {
+    use HasModelCache;
 
     public function __construct(TourRequire $model)
     {
@@ -20,11 +20,11 @@ class TourRequireRepository extends AbstractBaseRepository implements TourRequir
         $keyCache = ALL_TOUR_REQUIRE;
         $cachedData = $this->getCacheKey($keyCache);
 
-        if ($cachedData instanceof Collection) {
+        if ($cachedData) {
             return $cachedData;
         }
 
-        $result = $this->model->all();
+        $result = $this->queryWithRelations()->get();
 
         $this->setCacheKey($keyCache, $result);
 
@@ -36,22 +36,59 @@ class TourRequireRepository extends AbstractBaseRepository implements TourRequir
         $keyCache = TOUR_REQUIRE_ID . $id;
         $cachedData = $this->getCacheKey($keyCache);
 
-        if ($cachedData instanceof Collection) {
+        if ($cachedData) {
             return $cachedData;
         }
 
-        $result = $this->model->find($id);
+        $result = $this->queryWithRelations()->find($id);
 
         $this->setCacheKey($keyCache, $result);
 
         return $result;
     }
 
+    public function findTourRequireTourCode($code)
+    {
+        return $this->queryWithRelations()->where('tour_code', $code)->first();
+    }
+
     public function createTourRequire(array $data)
     {
-        $tour = $this->model->create($data);
+        $tour =  $this->model->create(
+            array_intersect_key($data, array_flip([
+                'tour_code',
+                'full_name',
+                'nationality',
+                'email',
+                'phone',
+                'expected_destination',
+                'tour_dates',
+                'departure_date',
+                'end_date',
+                'expected_month',
+                'expected_year',
+                'number_days',
+                'vehicle',
+                'adult',
+                'children',
+                'baby',
+                'number_rooms',
+                'hotel_standards',
+                'feedback_method',
+                'status',
+            ]))
+        );
 
-        $this->clearCache();
+        $tour->detail()->create(
+            array_intersect_key($data, array_flip([
+                'price',
+                'tour_program',
+                'tour_policy',
+                'terms_conditions',
+            ]))
+        );
+
+        $this->clearCacheModel();
 
         return $tour;
     }
@@ -61,71 +98,63 @@ class TourRequireRepository extends AbstractBaseRepository implements TourRequir
         $tour = $this->find($id);
         if (!$tour) return null;
 
-        $tour->update($data);
+        $tour->update(
+            array_intersect_key($data, array_flip([
+                'full_name',
+                'nationality',
+                'email',
+                'phone',
+                'expected_destination',
+                'tour_dates',
+                'departure_date',
+                'end_date',
+                'expected_month',
+                'expected_year',
+                'number_days',
+                'vehicle',
+                'adult',
+                'children',
+                'baby',
+                'number_rooms',
+                'hotel_standards',
+                'feedback_method',
+                'status',
+            ]))
+        );
 
-        $this->clearCache();
+        $tour->detail()->updateOrCreate([], array_intersect_key($data, array_flip([
+            'price',
+            'tour_program',
+            'tour_policy',
+            'terms_conditions',
+        ])));
+
+        $this->clearCacheModel();
         return $tour;
     }
 
     public function deleteTourRequire(int $id)
     {
-       $result =  $this->delete($id);
-       if ($result) {
-           $this->clearCache();
-           return true;
-       }
+        $tour = $this->find($id);
+        if (!$tour) return false;
+
+        $tour->detail()?->delete();
+        $tour->delete();
+        $this->clearCacheModel();
+
+        return true;
     }
 
-    private function getCacheKey(string $key): mixed
+    private function clearCacheModel()
     {
-        $store = Redis::connection();
-        $result = $store->get($key);
-
-        if ($result === '@null') {
-            return null;
-        }
-
-        if (!empty($result)) {
-            try {
-                $data = unserialize($result);
-                return is_array($data) ? collect($data) : $data;
-            } catch (\Exception $e) {
-                return null;
-            }
-        }
-
-        return null;
-    }
-
-    private function setCacheKey(string $key, mixed $data, int $ttl = 3600)
-    {
-        $store = Redis::connection();
-
-        if (empty($data)) {
-            $store->setex($key, $ttl, '@null');
-        } else {
-            $store->setex($key, $ttl, serialize($data->toArray()));
-        }
-    }
-
-
-    private function clearCache(): void
-    {
-        $store = Redis::connection();
-
-        $store->del([
-            ALL_TOUR_REQUIRE,
+        $this->clearCache([
+            'direct' => [ALL_TOUR_REQUIRE],
+            'patterns' => [TOUR_REQUIRE_ID . '*'],
         ]);
+    }
 
-        $patterns = [
-            TOUR_REQUIRE_ID . '*',
-        ];
-
-        foreach ($patterns as $pattern) {
-            $keys = $store->keys($pattern);
-            if (!empty($keys)) {
-                $store->del($keys);
-            }
-        }
+    private function queryWithRelations()
+    {
+        return $this->model->with(['detail']);
     }
 }

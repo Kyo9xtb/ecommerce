@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Api\V1\Handlers;
 use App\Enum\ResponseStatusCode;
 use App\Exceptions\JsonApiException;
 use App\Helper\CommandDataHelper;
+use App\Helpers\CodeHelper;
 use App\Http\Resources\TourRequireResource;
 use App\Http\Responses\Api\TourRequireResponse;
-use App\Models\TourRequire;
 use App\Repositories\TourRequire\TourRequireInterface;
 
 class TourRequireHandler
@@ -19,30 +19,22 @@ class TourRequireHandler
 
     public function handle($command)
     {
-        $request = $command->request;
-        $method = $request->getMethod();
-        $slug = $request->route('slug');
-        if ($method === 'GET') {
-            if ($command->id) {
-                return $this->handleGetById($command->id);
-            }
-            return $this->handleFetchAll();
+        return match ($command->request->getMethod()) {
+            'GET'    => $this->handleGet($command),
+            'POST'   => $this->handleCreate($command),
+            'PUT'    => $this->handleUpdate($command),
+            'DELETE' => $this->handleDelete((int) $command->id),
+            default  => throw new JsonApiException('Method not supported', ResponseStatusCode::PARAMS_INVALID),
+        };
+    }
+
+    private function handleGet($command)
+    {
+        if (isset($command->id)) {
+            return $this->handleGetById((int) $command->id);
         }
 
-        $handlers = [
-            'POST'   => 'handlePost',
-            'PUT'    => 'handleUpdate',
-            'DELETE' => 'handleDelete',
-        ];
-
-        if (!isset($handlers[$method])) {
-            throw new JsonApiException(
-                'Method not supported',
-                ResponseStatusCode::PARAMS_INVALID
-            );
-        }
-
-        return $this->{$handlers[$method]}($command);
+        return $this->handleFetchAll();
     }
 
     private function handleFetchAll(): TourRequireResponse
@@ -62,10 +54,9 @@ class TourRequireHandler
         ]);
     }
 
-    private function handleGetById($id): TourRequireResponse
+    private function handleGetById(int $id): TourRequireResponse
     {
         $data = $this->tourRequireInterface->findTourRequireById($id);
-
         if (!$data) {
             throw new JsonApiException(
                 'No data found',
@@ -80,7 +71,7 @@ class TourRequireHandler
         );
     }
 
-    private function handlePost($command): TourRequireResponse
+    private function handleCreate($command): TourRequireResponse
     {
         $fields = [
             'full_name',
@@ -102,8 +93,20 @@ class TourRequireHandler
             'hotel_standards',
             'note',
             'feedback',
+            'price',
+            'tour_program',
+            'tour_policy',
+            'terms_conditions'
         ];
-        $inputData = CommandDataHelper::extract($fields, $command);
+        $inputData = array_filter(CommandDataHelper::extract($fields, $command), fn($v) => !is_null($v));
+
+        do {
+            $tourCode = CodeHelper::generate('TR');
+        } while (
+            $this->tourRequireInterface->findTourRequireTourCode($tourCode)
+        );
+
+        $inputData['tour_code'] = $tourCode;
         $data = $this->tourRequireInterface->createTourRequire($inputData);
 
         if (!$data) {
@@ -143,7 +146,12 @@ class TourRequireHandler
             'hotel_standards',
             'note',
             'feedback',
+            'price',
+            'tour_program',
+            'tour_policy',
+            'terms_conditions'
         ];
+
         $inputData = CommandDataHelper::extract($fields, $command);
 
         $data = $this->tourRequireInterface->updateTourRequire((int) $command->id, $inputData);
@@ -160,10 +168,9 @@ class TourRequireHandler
         );
     }
 
-    private function handleDelete($command): TourRequireResponse
+    private function handleDelete(int $id): TourRequireResponse
     {
-
-        $data = $this->tourRequireInterface->deleteTourRequire((int) $command->id);
+        $data = $this->tourRequireInterface->deleteTourRequire($id);
         if (!$data) {
             throw new JsonApiException(
                 'Delete failed',

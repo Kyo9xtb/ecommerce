@@ -33,7 +33,8 @@
         },
         "files": [
             "app/Helper/helpers.php",
-            "app/Helper/constants.php"
+            "app/Helper/constants.php",
+            "app/Helper/CodeHelper.php"
         ]
     },
     "autoload-dev": {

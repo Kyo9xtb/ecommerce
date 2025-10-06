@@ -15,13 +15,22 @@ class TourRequire extends Model
     protected $connection = 'mysql';
 
     protected $attributes = [
-        'feedback' => 1,
+        'feedback_method' => 1,
+        'adult' => 0,
+        'children' => 0,
+        'baby' => 0,
+        'number_days' => 0,
+        'number_rooms' => 0,
+        'expected_month' => 0,
+        'expected_year' => 0,
     ];
     protected $fillable = [
+        'tour_code',
         'full_name',
         'nationality',
         'email',
         'phone',
+        'tour_dates',
         'expected_destination',
         'departure_date',
         'end_date',
@@ -35,7 +44,12 @@ class TourRequire extends Model
         'number_rooms',
         'hotel_standards',
         'note',
-        'feedback',
+        'feedback_method',
         'status'
     ];
+
+    public function detail()
+    {
+        return $this->hasOne(TourRequestDetail::class, 'tour_id', 'id');
+    }
 }
