@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Handlers;
 use App\Enum\ResponseStatusCode;
 use App\Exceptions\JsonApiException;
 use App\Helper\CommandDataHelper;
+use App\Helpers\CodeHelper;
 use App\Http\Resources\ContactCustomerResource;
 use App\Http\Responses\Api\ContactCustomerResponse;
 use App\Repositories\ContactCustomer\ContactCustomerInterface;
@@ -18,17 +19,22 @@ class ContactCustomerHandler
 
     public function handle($command)
     {
-        $method = $command->request->getMethod();
-        return match ($method) {
-            'GET' => match (true) {
-                isset($command->id)   => $this->handleGetContactById($command->id),
-                default               => $this->handleFetchAll(),
-            },
-            'POST'   => $this->handleWrite($command, 'createContact', 'Create'),
-            'PUT'    => $this->handleWrite($command, 'updateContact', 'Update', $command->id),
+        return match ($command->request->getMethod()) {
+            'GET' => $this->handleGet($command),
+            'POST'   => $this->handleCreate($command),
+            'PUT'    => $this->handleUpdate($command),
             'DELETE' => $this->handleDelete($command->id),
             default  => throw new JsonApiException('Method not supported', ResponseStatusCode::PARAMS_INVALID),
         };
+    }
+
+    private function handleGet($command)
+    {
+        if (isset($command->id)) {
+            return $this->handleGetContactById((int) $command->id);
+        }
+
+        return $this->handleFetchAll();
     }
 
     private function handleFetchAll(): ContactCustomerResponse
@@ -68,38 +74,75 @@ class ContactCustomerHandler
     }
 
 
-    private function handleWrite($command, string $action, string $successMessage, $id = null): ContactCustomerResponse
+    private function handleCreate($command): ContactCustomerResponse
     {
         $fields = [
             'full_name',
             'email',
             'phone',
+            'title',
             'contact_content',
             'contact_result',
             'status',
-            'title'
         ];
 
         $inputData = CommandDataHelper::extract($fields, $command);
 
-        $data = $id
-            ? $this->contactCustomerInterface->{$action}((int) $id, $inputData)
-            : $this->contactCustomerInterface->{$action}($inputData);
+        do {
+            $contactCode = CodeHelper::generateCodeNumeric();
+        } while (
+            $this->contactCustomerInterface->findContactByCode($contactCode)
+        );
 
-        if (!$data) {
-            throw new JsonApiException("{$successMessage} failed", ResponseStatusCode::PARAMS_INVALID);
+        $inputData['contact_code'] = $contactCode;
+
+        $result = $this->contactCustomerInterface->createContact($inputData);
+        if (!$result) {
+            throw new JsonApiException("Create contact customer failed", ResponseStatusCode::PARAMS_INVALID);
         }
 
         return ContactCustomerResponse::from([
-            'message' => "{$successMessage} success",
-            'data' => (new ContactCustomerResource($data))->resolve(),
+            'message' => "Create contact customer success",
+            'data' => (new ContactCustomerResource($result))->resolve(),
+        ]);
+    }
+
+    private function handleUpdate($command): ContactCustomerResponse
+    {
+        $id = $command->id;
+        $existContact = $this->contactCustomerInterface->findContactById($id);
+        if ($existContact->contact_code !== $command->contact_code) {
+            throw new JsonApiException("Update contact customer failed", ResponseStatusCode::PARAMS_INVALID);
+        }
+        // dd($existContact);
+        $fields = [
+            'full_name',
+            'email',
+            'phone',
+            'title',
+            'contact_content',
+            'contact_result',
+            'status',
+        ];
+
+        $inputData = CommandDataHelper::extract($fields, $command);
+
+        $result = $this->contactCustomerInterface->updateContact((int) $command->id, $inputData);
+
+        if (!$result) {
+            throw new JsonApiException("Update contact customer failed", ResponseStatusCode::PARAMS_INVALID);
+        }
+
+        return ContactCustomerResponse::from([
+            'message' => "Update contact customer success",
+            'data' => (new ContactCustomerResource($result))->resolve(),
         ]);
     }
 
     private function handleDelete($id): ContactCustomerResponse
     {
-
         $data = $this->contactCustomerInterface->deleteContact((int) $id);
+
         if (!$data) {
             throw new JsonApiException(
                 'Delete failed',

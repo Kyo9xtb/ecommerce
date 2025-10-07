@@ -16,6 +16,7 @@ class ContactCustomerResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'contact_code' => $this->contact_code ?? null,
             'full_name' => $this->full_name ?? null,
             'email' => $this->email ?? null,
             'phone' => $this->phone ?? null,

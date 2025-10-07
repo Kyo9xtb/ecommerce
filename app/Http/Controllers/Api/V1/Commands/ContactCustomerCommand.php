@@ -10,6 +10,7 @@ use AllowDynamicProperties;
     public function __construct(public $request)
     {
         $this->id = $request->id;
+        $this->contact_code = $request->contact_code;
         $this->full_name = $request->full_name;
         $this->email = $request->email;
         $this->phone = $request->phone;

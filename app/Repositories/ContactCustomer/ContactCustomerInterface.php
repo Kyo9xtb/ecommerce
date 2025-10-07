@@ -7,6 +7,7 @@ interface ContactCustomerInterface
 {
     public function fetchAll();
     public function findContactById($id);
+    public function findContactByCode($code);
     public function createContact($data);
     public function updateContact($id, $data);
     public function deleteContact($id);

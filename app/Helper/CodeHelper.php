@@ -22,4 +22,12 @@ class CodeHelper
 
         return "{$prefix}-{$date}{$random}";
     }
+
+    public static function generateCodeNumeric(string $prefix = '', int $randomDigits = 3): string
+    {
+        $prefix = strtoupper(trim($prefix));
+        $timestamp = date('YmdHis'); // năm tháng ngày giờ phút giây
+        $rand = str_pad((string)random_int(0, (int)str_repeat('9', $randomDigits)), $randomDigits, '0', STR_PAD_LEFT);
+        return $prefix ? $prefix .'-'. $timestamp . $rand : $timestamp . $rand;
+    }
 }

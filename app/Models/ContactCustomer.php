@@ -25,6 +25,7 @@ class ContactCustomer extends Model
     ];
 
     protected $fillable = [
+        'contact_code',
         'full_name',
         'email',
         'phone',

@@ -15,3 +15,5 @@ const BOOKING_TOUR_ID = 'BOOKING_TOUR_ID_';
 const ALL_NEWS = 'ALL_NEWS';
 const NEWS_ID = 'NEWS_ID_';
 const NEWS_SLUG = 'NEWS_SLUG_';
+const ALL_CONTACT = 'ALL_CONTACT';
+const CONTACT_ID = 'CONTACT_ID_';

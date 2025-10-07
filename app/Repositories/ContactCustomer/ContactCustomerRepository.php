@@ -4,9 +4,11 @@ namespace App\Repositories\ContactCustomer;
 
 use App\Core\AbstractBaseRepository;
 use App\Models\ContactCustomer;
+use App\Trait\HasModelCache;
 
 class ContactCustomerRepository extends AbstractBaseRepository implements ContactCustomerInterface
 {
+    use HasModelCache;
 
     public function __construct(ContactCustomer $model)
     {
@@ -15,25 +17,67 @@ class ContactCustomerRepository extends AbstractBaseRepository implements Contac
 
     public function fetchAll()
     {
-        return $this->all();
+        $keyCache = ALL_CONTACT;
+        $cachedData = $this->getCacheKey($keyCache);
+
+        if ($cachedData) {
+            return $cachedData;
+        }
+
+        $result = $this->all();
+
+        $this->setCacheKey($keyCache, $result, 604800);
+
+        return $result;
     }
+
     public function findContactById($id)
     {
-        return $this->find($id);
+        $keyCache = CONTACT_ID . $id;
+        $cachedData = $this->getCacheKey($keyCache);
+
+        if ($cachedData) {
+            return $cachedData;
+        }
+
+        $result = $this->find($id);
+
+        $this->setCacheKey($keyCache, $result, 604800);
+
+        return $result;
+    }
+
+    public function findContactByCode($code)
+    {
+        return $this->model->where('contact_code', $code)->first();
     }
 
     public function createContact($data)
     {
-        return $this->create($data);
+        $res = $this->create($data);
+        $this->clearCacheModel();
+        return $res;
     }
 
     public function updateContact($id, $data)
     {
-        return $this->update($id, $data);
+        $res = $this->update($id, $data);
+        $this->clearCacheModel();
+        return $res;
     }
-    
+
     public function deleteContact($id)
     {
-        return $this->delete($id);
+        $res = $this->delete($id);
+        $this->clearCacheModel();
+        return $res;
+    }
+
+    private function clearCacheModel()
+    {
+        $this->clearCache([
+            'direct' => [ALL_CONTACT],
+            'patterns' => [CONTACT_ID . '*'],
+        ]);
     }
 }
