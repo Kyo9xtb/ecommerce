@@ -14,6 +14,8 @@ use App\Repositories\PassengerInformationTour\PassengerInformationTourInterface;
 use App\Repositories\PassengerInformationTour\PassengerInformationTourRepository;
 use App\Repositories\Tour\TourInterface;
 use App\Repositories\Tour\TourRepository;
+use App\Repositories\TouristDestination\TouristDestinationInterface;
+use App\Repositories\TouristDestination\TouristDestinationRepository;
 use App\Repositories\TourRequire\TourRequireInterface;
 use App\Repositories\TourRequire\TourRequireRepository;
 use App\Repositories\User\UserInterface;
@@ -32,6 +34,7 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(NewsInterface::class, NewsRepository::class);
         $this->app->bind(CartInterface::class, CartRepository::class);
         $this->app->bind(PassengerInformationTourInterface::class, PassengerInformationTourRepository::class);
+        $this->app->bind(TouristDestinationInterface::class, TouristDestinationRepository::class);
     }
 
     public function boot(): void
