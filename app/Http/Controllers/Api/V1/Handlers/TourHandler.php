@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Handlers;
 
 use App\Enum\ResponseStatusCode;
 use App\Exceptions\JsonApiException;
+use App\Helper\CodeHelper;
 use App\Helper\CommandDataHelper;
 use App\Http\Resources\TourResource;
 use App\Http\Responses\Api\TourResponse;
@@ -156,6 +157,21 @@ class TourHandler
             CommandDataHelper::extract($fields, $command),
             fn($value) => !is_null($value)
         );
+
+        $prefix = match ((int) ($inputData['tour_group'] ?? 0)) {
+            1 => 'DOM',  // Domestic
+            2 => 'INT',  // International
+            3 => 'TMB',  // Team Building
+            4 => 'OTH',  // Others
+            default => 'UNDEF', // Undefined
+        };
+        do {
+            $tourCode = CodeHelper::generate("TOUR-$prefix");
+        } while (
+            $this->tourInterface->findTourCode($tourCode)
+        );
+
+        $inputData['tour_code'] =  $tourCode;
         $inputData['thumbnail'] =  $thumbnail;
         $inputData['images'] = $images;
 
@@ -186,6 +202,13 @@ class TourHandler
         if (!$tourExist) {
             throw new JsonApiException(
                 'Tour information is not available',
+                ResponseStatusCode::PARAMS_INVALID
+            );
+        }
+
+        if ($tourExist->tour_code !== $command->tour_code) {
+            throw new JsonApiException(
+                'The tour code has been changed',
                 ResponseStatusCode::PARAMS_INVALID
             );
         }

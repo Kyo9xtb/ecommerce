@@ -10,6 +10,7 @@ use AllowDynamicProperties;
     public function __construct(public $request)
     {
         $this->id = $request->id;
+        $this->tour_code = $request->tour_code;
         $this->tour_name = $request->tour_name;
         $this->slug = $request->slug;
         $this->price = $request->price;

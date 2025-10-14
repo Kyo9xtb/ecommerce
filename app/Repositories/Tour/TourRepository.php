@@ -100,6 +100,11 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
         return $result;
     }
 
+    public function findTourCode(string $code)
+    {
+        return $this->model->where('tour_code', $code)->first();
+    }
+
     public function findTourName(string $name)
     {
         return Tour::query()->where('tour_name', $name)->first();
@@ -109,6 +114,7 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
     {
         $tour =  $this->model->create(
             array_intersect_key($data, array_flip([
+                'tour_code',
                 'tour_name',
                 'slug',
                 'price',

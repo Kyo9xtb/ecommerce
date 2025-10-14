@@ -46,6 +46,7 @@ class TourResource extends JsonResource
         })->filter()->values();
         return [
             'id' => $this->id,
+            'tour_code' => $this->tour_code ?? null,
             'tour_name' => $this->tour_name ?? null,
             'slug' => $this->slug ?? null,
             'tour_group' => +$this->tour_group ?? 1,

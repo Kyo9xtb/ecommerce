@@ -23,6 +23,7 @@ class Tour extends Model
     ];
 
     protected $fillable = [
+        'tour_code',
         'tour_name',
         'slug',
         'price',

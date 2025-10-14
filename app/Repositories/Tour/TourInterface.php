@@ -10,6 +10,7 @@ interface TourInterface
     public function getAllTourInactive();
     public function findTourById(int $id);
     public function findTourBySlug(string $slug);
+    public function findTourCode(string $code);
     public function findTourName(string $name);
     public function createTour(array $data);
     public function updateTour(int $id, array $data);
