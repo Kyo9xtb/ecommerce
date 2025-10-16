@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1\Handlers;
 use App\Enum\ResponseStatusCode;
 use App\Exceptions\JsonApiException;
 use App\Helper\CommandDataHelper;
-use App\Helpers\CodeHelper;
+use App\Helper\CodeHelper;
 use App\Http\Resources\ContactCustomerResource;
 use App\Http\Responses\Api\ContactCustomerResponse;
 use App\Repositories\ContactCustomer\ContactCustomerInterface;

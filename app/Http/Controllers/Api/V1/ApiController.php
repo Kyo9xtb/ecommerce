@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Commands\ApiCommand;
 use App\Http\Controllers\Api\V1\Commands\BookingTourCommand;
 use App\Http\Controllers\Api\V1\Commands\CartCommand;
 use App\Http\Controllers\Api\V1\Commands\ContactCustomerCommand;
+use App\Http\Controllers\Api\V1\Commands\CustomerCommand;
 use App\Http\Controllers\Api\V1\Commands\NewsCommand;
 use App\Http\Controllers\Api\V1\Commands\PassengerInformationTourCommand;
 use App\Http\Controllers\Api\V1\Commands\TourCommand;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Api\V1\Handlers\ApiHandler;
 use App\Http\Controllers\Api\V1\Handlers\BookingTourHandler;
 use App\Http\Controllers\Api\V1\Handlers\CartHandler;
 use App\Http\Controllers\Api\V1\Handlers\ContactCustomerHandler;
+use App\Http\Controllers\Api\V1\Handlers\CustomerHandler;
 use App\Http\Controllers\Api\V1\Handlers\NewsHandler;
 use App\Http\Controllers\Api\V1\Handlers\PassengerInformationTourHandler;
 use App\Http\Controllers\Api\V1\Handlers\TourHandler;
@@ -27,6 +29,7 @@ use App\Http\Requests\Api\ApiRequest;
 use App\Http\Requests\Api\BookingTourRequest;
 use App\Http\Requests\Api\CartRequest;
 use App\Http\Requests\Api\ContactCustomerRequest;
+use App\Http\Requests\Api\CustomerRequest;
 use App\Http\Requests\Api\NewsRequest;
 use App\Http\Requests\Api\PassengerInformationTourRequest;
 use App\Http\Requests\Api\TouristDestinationRequest;
@@ -125,6 +128,15 @@ class ApiController extends Controller
         $this->commandBus->addHandler(TouristDestinationCommand::class, TouristDestinationHandler::class);
 
         $command = $this->commandBus->dispatch(new TouristDestinationCommand($request));
+
+        return $this->responseSuccess($command->data, $command->message);
+    }
+
+    public function Customer(CustomerRequest $request)
+    {
+        $this->commandBus->addHandler(CustomerCommand::class, CustomerHandler::class);
+
+        $command = $this->commandBus->dispatch(new CustomerCommand($request));
 
         return $this->responseSuccess($command->data, $command->message);
     }

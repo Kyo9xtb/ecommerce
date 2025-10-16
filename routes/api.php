@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Account\AccountController;
 use App\Http\Controllers\Api\V1\ApiController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +27,13 @@ Route::prefix('v1')->namespace('V1')->group(function () {
 
     });
 
-    Route::match(['get', 'post', 'put', 'delete'], '/user', [ApiController::class, 'user']);
+    Route::prefix('/customer/auth')->group(function () {
+        Route::post('/login', [AccountController::class, 'CustomerAuth']);
+        Route::post('/logout', [AccountController::class, 'CustomerAuth'])->middleware('jwt.customer');
+        Route::post('/me', [AccountController::class, 'CustomerAuth'])->middleware('jwt.customer');
+    });
+
+    Route::match(['get', 'post', 'put', 'delete'], '/customer', [ApiController::class, 'Customer']);
     Route::get('/tour/{slug}', [ApiController::class, 'tour']);
     Route::match(['get', 'post', 'put', 'delete'], '/tour', [ApiController::class, 'tour']);
     Route::match(['get', 'post', 'put', 'delete'], '/tour-require', [ApiController::class, 'TourRequire']);

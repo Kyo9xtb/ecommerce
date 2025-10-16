@@ -2,6 +2,8 @@
 
 namespace App\Trait;
 
+use App\Enum\Authen\AuthenStatus;
+use App\Enum\Authen\AuthenStatusCode;
 use App\Enum\ResponseStatus;
 use App\Enum\ResponseStatusCode;
 use Illuminate\Http\JsonResponse;
@@ -17,6 +19,16 @@ trait ResponseJson
     public function responseFail($message = null, $errorCode = 1, $data = [], $dataExtra = []): JsonResponse
     {
         return $this->responseJson(ResponseStatus::FAIL, $message, $data, $errorCode, ResponseStatusCode::SUCCESS, $dataExtra);
+    }
+
+    public function responseSuccessLogin($message = '', $data = [], $dataExtra = [])
+    {
+        return $this->responseJson(AuthenStatus::SUCCESS, $message, $data, AuthenStatusCode::NONE_ERR, AuthenStatusCode::SUCCESS, $dataExtra);
+    }
+
+    public function responseFailLogin($message = null, $errorCode = 1, $data = [], $dataExtra = []): JsonResponse
+    {
+        return $this->responseJson(AuthenStatus::FAIL, $message, $data, $errorCode, AuthenStatusCode::SUCCESS, $dataExtra);
     }
 
     public function responseJson($status, $message, $data, $errorCode, $code = 200, $dataMerge = []): JsonResponse

@@ -8,6 +8,8 @@ use App\Repositories\Cart\CartInterface;
 use App\Repositories\Cart\CartRepository;
 use App\Repositories\ContactCustomer\ContactCustomerInterface;
 use App\Repositories\ContactCustomer\ContactCustomerRepository;
+use App\Repositories\Customer\CustomerInterface;
+use App\Repositories\Customer\CustomerRepository;
 use App\Repositories\News\NewsInterface;
 use App\Repositories\News\NewsRepository;
 use App\Repositories\PassengerInformationTour\PassengerInformationTourInterface;
@@ -35,6 +37,7 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(CartInterface::class, CartRepository::class);
         $this->app->bind(PassengerInformationTourInterface::class, PassengerInformationTourRepository::class);
         $this->app->bind(TouristDestinationInterface::class, TouristDestinationRepository::class);
+        $this->app->bind(CustomerInterface::class, CustomerRepository::class);
     }
 
     public function boot(): void
