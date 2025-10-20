@@ -4,6 +4,7 @@ namespace App\Enum\Authen;
 
 enum AuthenStatusCode: int
 {
+    const NONE_ERR = 0;
     // ✅ Thành công chung
     const SUCCESS = 200;
 

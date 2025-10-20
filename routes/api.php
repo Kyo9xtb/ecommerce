@@ -30,7 +30,13 @@ Route::prefix('v1')->namespace('V1')->group(function () {
     Route::prefix('/customer/auth')->group(function () {
         Route::post('/login', [AccountController::class, 'CustomerAuth']);
         Route::post('/logout', [AccountController::class, 'CustomerAuth'])->middleware('jwt.customer');
-        Route::post('/me', [AccountController::class, 'CustomerAuth'])->middleware('jwt.customer');
+        Route::get('/me', [AccountController::class, 'CustomerAuth'])->middleware('jwt.customer');
+    });
+
+    Route::prefix('/employee/auth')->group(function () {
+        Route::post('/login', [AccountController::class, 'EmployeeAuth']);
+        Route::post('/logout', [AccountController::class, 'EmployeeAuth'])->middleware('jwt.employee');
+        Route::get('/me', [AccountController::class, 'EmployeeAuth'])->middleware('jwt.employee');
     });
 
     Route::match(['get', 'post', 'put', 'delete'], '/customer', [ApiController::class, 'Customer']);
