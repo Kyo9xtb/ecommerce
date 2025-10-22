@@ -9,11 +9,12 @@ use App\Helper\CommandDataHelper;
 use App\Http\Resources\TourResource;
 use App\Http\Responses\Api\TourResponse;
 use App\Repositories\Tour\TourInterface;
+use App\Trait\FileHandler;
 use Illuminate\Support\Facades\Storage;
 
 class TourHandler
 {
-
+    use FileHandler;
     public function __construct(
         public TourInterface $tourInterface,
     ) {}
@@ -152,11 +153,19 @@ class TourHandler
             'vehicles',
             'guests',
         ];
-        extract($this->processFiles($command));
         $inputData = array_filter(
             CommandDataHelper::extract($fields, $command),
             fn($value) => !is_null($value)
         );
+
+        $thumbnailFiles = $command->request->file('thumbnail');
+        $imageFiles = $command->request->file('images');
+
+        $thumbnail = $this->processFiles($thumbnailFiles, 'tour/temp');
+        $images = $this->processFiles($imageFiles, 'tour/temp');
+
+        $inputData['thumbnail'] = $thumbnail ? $thumbnail[0] : null;
+        $inputData['images'] = $images;
 
         $prefix = match ((int) ($inputData['tour_group'] ?? 0)) {
             1 => 'DOM',  // Domestic
@@ -172,23 +181,27 @@ class TourHandler
         );
 
         $inputData['tour_code'] =  $tourCode;
-        $inputData['thumbnail'] =  $thumbnail;
-        $inputData['images'] = $images;
 
-        $data = $this->tourInterface->createTour($inputData);
+        $result = $this->tourInterface->createTour($inputData);
 
-        $this->moveFiles($data->id, $thumbnail, $images);
 
-        if (!$data) {
+        if (!$result) {
             throw new JsonApiException(
                 'Create tour information failed',
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
 
+        if ($thumbnail) {
+            $this->moveFiles($thumbnail, "tour/temp", "tour/{$result->id}");
+        }
+        if ($images) {
+            $this->moveFiles($images, "tour/temp", "tour/{$result->id}");
+        }
+
         return new TourResponse(
             message: 'Create tour information successful',
-            data: (new TourResource($data))->resolve()
+            data: (new TourResource($result))->resolve()
         );
     }
 
@@ -230,29 +243,6 @@ class TourHandler
             );
         }
 
-        $tourOld = $this->tourInterface->findTourById($id);
-
-        if ($command->request->hasFile('thumbnail') && $tourOld->thumbnail) {
-            Storage::disk('public')->delete("tour/{$id}/{$tourOld->thumbnail}");
-        }
-
-        if ($command->request->hasFile('images') && !empty($tourOld->images)) {
-            foreach ($tourOld->images as $image) {
-                Storage::disk('public')->delete("tour/{$id}/{$image->image}");
-            }
-        }
-        if (!$command->thumbnail) {
-            Storage::disk('public')->delete("tour/{$id}/{$tourOld->thumbnail}");
-        }
-
-        if (!$command->images) {
-            foreach ($tourOld->images as $image) {
-                Storage::disk('public')->delete("tour/{$id}/{$image->image}");
-            }
-        }
-
-        extract($this->processFiles($command));
-
         $fields = [
             'tour_name',
             'slug',
@@ -270,21 +260,40 @@ class TourHandler
             'vehicles',
             'departure_schedule',
             'guests',
+            'existing_thumbnail',
+            'existing_images'
         ];
 
         $inputData = CommandDataHelper::extract($fields, $command);
 
-        if ($command->request->hasFile('thumbnail')) {
-            $inputData['thumbnail'] = $thumbnail;
+        $existingImages = $inputData['existing_images'] ?? [];
+
+        $currentImages = collect($tourExist->images)->pluck('image')->toArray();
+
+        $toDelete = array_diff($currentImages, $existingImages);
+        foreach ($toDelete as $fileName) {
+            $this->deleteFiles("tour/{$id}/{$fileName}");
         }
 
-        if ($command->request->hasFile('images')) {
-            $inputData['images'] = $images;
+        $thumbnailFiles = $command->request->file('thumbnail');
+        $imageFiles = $command->request->file('images');
+
+        $thumbnail = $thumbnailFiles ? $this->processFiles($thumbnailFiles, 'tour/temp') : null;
+        $newImages = $imageFiles ? $this->processFiles($imageFiles, 'tour/temp') : null;
+
+        if ($thumbnail) {
+            $this->deleteFiles("tour/{$id}/{$tourExist->thumbnail}");
+            $inputData['thumbnail'] = $thumbnail[0];
+        } else {
+            $inputData['thumbnail'] = $inputData['existing_thumbnail'] ?? null;
+            if (!$inputData['thumbnail']) {
+                $this->deleteFiles("tour/{$id}/{$tourExist->thumbnail}");
+            }
         }
+
+        $inputData['images'] = array_merge($newImages ?? [], $existingImages ?? []);
 
         $data = $this->tourInterface->updateTour((int) $id, $inputData);
-
-        $this->moveFiles($id, $thumbnail, $images);
 
         if (!$data) {
             throw new JsonApiException(
@@ -293,6 +302,13 @@ class TourHandler
             );
         }
 
+        if ($thumbnail) {
+            $this->moveFiles($thumbnail, "tour/temp", "tour/{$id}");
+        }
+
+        if ($newImages) {
+            $this->moveFiles($newImages, "tour/temp", "tour/{$id}");
+        }
         return new TourResponse(
             message: 'Tour information updated successfully',
             data: (new TourResource($data))->resolve()
@@ -311,57 +327,54 @@ class TourHandler
             );
         }
 
-        $directory = "tour/$id";
-        if (Storage::disk('public')->exists($directory)) {
-            Storage::disk('public')->deleteDirectory($directory);
-        }
+        $this->deleteFolders("tour/$id");
 
         return new TourResponse(
             message: 'Delete tour information successful'
         );
     }
 
-    private function processFiles($command): array
-    {
-        $images = [];
-        $thumbnail = null;
+    // private function processFiles($command): array
+    // {
+    //     $images = [];
+    //     $thumbnail = null;
 
-        if ($command->request->hasFile('thumbnail')) {
-            $filename = time() . '.' . $command->request->file('thumbnail')->getClientOriginalExtension();
-            $command->request->file('thumbnail')->storeAs('public/tour', $filename);
-            $thumbnail = $filename;
-        }
+    //     if ($command->request->hasFile('thumbnail')) {
+    //         $filename = time() . '.' . $command->request->file('thumbnail')->getClientOriginalExtension();
+    //         $command->request->file('thumbnail')->storeAs('public/tour', $filename);
+    //         $thumbnail = $filename;
+    //     }
 
-        if ($command->request->hasFile('images')) {
-            foreach ($command->request->file('images') as $image) {
-                $filename = uniqid() . '.' . $image->getClientOriginalExtension();
-                $image->storeAs('public/tour', $filename);
-                $images[] = $filename;
-            }
-        }
+    //     if ($command->request->hasFile('images')) {
+    //         foreach ($command->request->file('images') as $image) {
+    //             $filename = uniqid() . '.' . $image->getClientOriginalExtension();
+    //             $image->storeAs('public/tour', $filename);
+    //             $images[] = $filename;
+    //         }
+    //     }
 
-        return compact('thumbnail', 'images');
-    }
+    //     return compact('thumbnail', 'images');
+    // }
 
-    private function moveFiles(int $tourId, ?string $thumbnail, array $images): void
-    {
-        if ($thumbnail) {
-            Storage::disk('public')->move("tour/$thumbnail", "tour/$tourId/$thumbnail");
-        }
+    // private function moveFiles(int $tourId, ?string $thumbnail, array $images): void
+    // {
+    //     if ($thumbnail) {
+    //         Storage::disk('public')->move("tour/$thumbnail", "tour/$tourId/$thumbnail");
+    //     }
 
-        foreach ($images as $img) {
-            Storage::disk('public')->move("tour/$img", "tour/$tourId/$img");
-        }
-    }
+    //     foreach ($images as $img) {
+    //         Storage::disk('public')->move("tour/$img", "tour/$tourId/$img");
+    //     }
+    // }
 
-    function deleteOldFiles($tour, $id)
-    {
-        if ($tour->thumbnail) {
-            Storage::disk('public')->delete("tour/{$id}/{$tour->thumbnail}");
-        }
+    // function deleteOldFiles($tour, $id)
+    // {
+    //     if ($tour->thumbnail) {
+    //         Storage::disk('public')->delete("tour/{$id}/{$tour->thumbnail}");
+    //     }
 
-        foreach ($tour->images ?? [] as $image) {
-            Storage::disk('public')->delete("tour/{$id}/{$image}");
-        }
-    }
+    //     foreach ($tour->images ?? [] as $image) {
+    //         Storage::disk('public')->delete("tour/{$id}/{$image}");
+    //     }
+    // }
 }

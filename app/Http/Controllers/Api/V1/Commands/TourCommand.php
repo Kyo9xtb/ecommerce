@@ -29,5 +29,7 @@ use AllowDynamicProperties;
         $this->tour_group = $request->tour_group;
         $this->departure_schedule = $request->departure_schedule;
         $this->guests = $request->guests;
+        $this->existing_thumbnail = $request->existing_thumbnail;
+        $this->existing_images = $request->existing_images;
     }
 }

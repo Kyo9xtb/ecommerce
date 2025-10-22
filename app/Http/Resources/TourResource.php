@@ -12,57 +12,73 @@ class TourResource extends JsonResource
     {
         $basePath = "tour/{$this->id}/";
 
-        $images = $this->images->map(function ($img) use ($basePath) {
-            if (!$img->image) {
-                return null;
-            }
+        $images = collect($this->images)
+            ->map(function ($img) use ($basePath) {
+                if (!$img['image'] ?? !$img->image) {
+                    return null;
+                }
 
-            $imagePath = $basePath . $img->image;
+                $imagePath = $basePath . ($img['image'] ?? $img->image);
 
-            return [
-                'image' => $imagePath,
-                'image_url' => asset(Storage::url($imagePath)),
-            ];
-        })->filter()->values();
+                return [
+                    'image' => $imagePath,
+                    'image_url' => asset(Storage::url($imagePath)),
+                ];
+            })
+            ->filter()
+            ->values();
 
-        $vehicles = $this->vehicles->map(function ($vehicle) {
-            if (!$vehicle->code_vehicle) {
-                return null;
-            }
-            return [
-                'code_vehicle' => $vehicle->code_vehicle,
-                'name_vehicle' => null,
-            ];
-        })->filter()->values();
+        $vehicles = collect($this->vehicles)
+            ->map(function ($vehicle) {
+                $code = $vehicle['code_vehicle'] ?? $vehicle->code_vehicle ?? null;
 
-        $guests = $this->guests->map(function ($guest) {
-            if (!$guest->guest_code) {
-                return null;
-            }
-            return [
-                'guest_code' => $guest->guest_code,
-                'guests_name' => null,
-            ];
-        })->filter()->values();
+                if (!$code) {
+                    return null;
+                }
+
+                return [
+                    'code_vehicle' => (int) $code,
+                    'vehicle_name' => $vehicle['vehicle_name'] ?? $vehicle->vehicle_name ?? null,
+                ];
+            })
+            ->filter()
+            ->values();
+
+        $guests = collect($this->guests)
+            ->map(function ($guest) {
+                $code = $guest['guest_code'] ?? $guest->guest_code ?? null;
+
+                if (!$code) {
+                    return null;
+                }
+
+                return [
+                    'guest_code' => (int) $code,
+                    'guest_name' => $guest['guest_name'] ?? $guest->guest_name ?? null,
+                ];
+            })
+            ->filter()
+            ->values();
+
         return [
             'id' => $this->id,
-            'tour_code' => $this->tour_code ?? null,
-            'tour_name' => $this->tour_name ?? null,
-            'slug' => $this->slug ?? null,
-            'tour_group' => +$this->tour_group ?? 1,
-            'area' => $this->area ?? null,
-            'suggested_price' => +$this->price ?? 0,
+            'tour_code' => $this->tour_code,
+            'tour_name' => $this->tour_name,
+            'slug' => $this->slug,
+            'tour_group' => (int) $this->tour_group ?: 1,
+            'area' => $this->area,
+            'suggested_price' => (float)$this->price ?: 0,
             'is_sale' => $this->sale > 0,
             'sale' => $this->sale ?? 0,
-            'price' => $this->price - ($this->price * ($this->sale / 100)) ?? 0,
-            'trip' => $this->trip ?? null,
-            'departure_schedule' => $this->departure_schedule ?? null,
-            'time' => $this->time ?? null,
-            'status' => $this->status ?? 1,
-            'tour_summary' => $this->detail->tour_summary ?? null,
-            'tour_program' => $this->detail->tour_program ?? null,
-            'tour_policy' => $this->detail->tour_policy ?? null,
-            'terms_conditions' => $this->detail->terms_conditions ?? null,
+            'price' => round($this->price - ($this->price * ($this->sale / 100))),
+            'trip' => $this->trip,
+            'departure_schedule' => $this->departure_schedule,
+            'time' => $this->time,
+            'status' => $this->status ?: 1,
+            'tour_summary' => data_get($this->detail, 'tour_summary'),
+            'tour_program' =>  data_get($this->detail, 'tour_program'),
+            'tour_policy' =>  data_get($this->detail, 'tour_policy'),
+            'terms_conditions' =>  data_get($this->detail, 'terms_conditions'),
             'vehicles' => $vehicles->isEmpty() ? null : $vehicles,
             'guests' => $guests->isEmpty() ? null : $guests,
             'thumbnail' => $this->thumbnail

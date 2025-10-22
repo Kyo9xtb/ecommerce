@@ -4,11 +4,13 @@ namespace App\Repositories\Tour;
 
 use App\Core\AbstractBaseRepository;
 use App\Models\Tour;
+use App\Trait\HasModelCache;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Redis;
 
 class TourRepository extends AbstractBaseRepository implements TourInterface
 {
+    use HasModelCache;
 
     public function __construct(Tour $model)
     {
@@ -21,7 +23,7 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
         $keyCache = ALL_TOUR;
         $cachedData = $this->getCacheKey($keyCache);
 
-        if ($cachedData instanceof Collection) {
+        if ($cachedData) {
             return $cachedData;
         }
 
@@ -38,7 +40,7 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
         $keyCache = TOUR_ACTIVE;
         $cachedData = $this->getCacheKey($keyCache);
 
-        if ($cachedData instanceof Collection) {
+        if ($cachedData) {
             return $cachedData;
         }
         $result = $this->queryWithRelations()->where('status', 1)->get();
@@ -55,7 +57,7 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
         $keyCache = TOUR_INACTIVE;
         $cachedData = $this->getCacheKey($keyCache);
 
-        if ($cachedData instanceof Collection) {
+        if ($cachedData) {
             return $cachedData;
         }
 
@@ -72,7 +74,7 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
         $keyCache = TOUR_ID . $id;
         $cachedData = $this->getCacheKey($keyCache);
 
-        if ($cachedData instanceof Collection) {
+        if ($cachedData) {
             return $cachedData;
         }
 
@@ -89,7 +91,7 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
         $keyCache = TOUR_SLUG . $slug;
         $cachedData = $this->getCacheKey($keyCache);
 
-        if ($cachedData instanceof Collection) {
+        if ($cachedData) {
             return $cachedData;
         }
 
@@ -158,16 +160,6 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
             }
         }
 
-        if (!empty($data['vehicles']) && is_array($data['vehicles'])) {
-            $validVehicles = array_map(function ($vehicle) {
-                return ['code_vehicle' => (int)$vehicle['code_vehicle']];
-            }, array_filter($data['vehicles']));
-
-            if (!empty($validVehicles)) {
-                $tour->vehicles()->createMany($validVehicles);
-            }
-        }
-
         if (!empty($data['guests']) && is_array($data['guests'])) {
             $validGuests = array_map(function ($guest) {
                 return ['guest_code' => (int) $guest['guest_code']];
@@ -178,7 +170,7 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
             }
         }
 
-        $this->clearCache();
+        $this->clearCacheModel();
 
         return $tour;
     }
@@ -210,43 +202,75 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
             'terms_conditions',
         ])));
 
-        $tour->vehicles()?->delete();
-        $tour->guests()?->delete();
-
         if (!empty($data['images']) && is_array($data['images'])) {
-            $tour->images()?->delete();
+
             $validImages = array_map(function ($image) {
                 return ['image' => $image];
             }, array_filter($data['images']));
 
-            if (!empty($validImages)) {
-                $tour->images()->createMany($validImages);
+            $oldImages  = $tour->images()->pluck('image')->toArray();
+
+            $newImages = array_column($validImages, 'image');
+
+            $toDelete = array_diff($oldImages, $newImages);
+            $toAdd = array_diff($newImages, $oldImages);
+
+            if (!empty($toDelete)) {
+                $tour->images()->whereIn('image', $toDelete)->delete();
+            }
+
+            if (!empty($toAdd)) {
+                $tour->images()->createMany(
+                    array_map(fn($img) => ['image' => $img], $toAdd)
+                );
             }
         }
 
         if (!empty($data['vehicles']) && is_array($data['vehicles'])) {
+            $newVehicles = array_map(
+                fn($vehicle) => (int) $vehicle['code_vehicle'],
+                array_filter($data['vehicles'], fn($v) => !empty($v['code_vehicle']))
+            );
 
-            $validVehicles = array_map(function ($vehicle) {
-                return ['code_vehicle' => (int)$vehicle['code_vehicle']];
-            }, array_filter($data['vehicles']));
+            $oldVehicles = $tour->vehicles()->pluck('code_vehicle')->toArray();
 
-            if (!empty($validVehicles)) {
-                $tour->vehicles()->createMany($validVehicles);
+            $toDelete = array_diff($oldVehicles, $newVehicles);
+            $toAdd = array_diff($newVehicles, $oldVehicles);
+
+            if ($toDelete) {
+                $tour->vehicles()->whereIn('code_vehicle', $toDelete)->delete();
+            }
+
+            if ($toAdd) {
+                $tour->vehicles()->createMany(
+                    array_map(fn($v) => ['code_vehicle' => $v], $toAdd)
+                );
             }
         }
 
         if (!empty($data['guests']) && is_array($data['guests'])) {
+            $newGuests = array_map(
+                fn($guest) => (int) $guest['guest_code'],
+                array_filter($data['guests'], fn($g) => !empty($g['guest_code']))
+            );
 
-            $validGuests = array_map(function ($guest) {
-                return ['guest_code' => (int) $guest['guest_code']];
-            }, array_filter($data['guests']));
+            $oldGuests = $tour->guests()->pluck('guest_code')->toArray();
 
-            if (!empty($validGuests)) {
-                $tour->guests()->createMany($validGuests);
+            $toDelete = array_diff($oldGuests, $newGuests);
+            $toAdd = array_diff($newGuests, $oldGuests);
+
+            if ($toDelete) {
+                $tour->guests()->whereIn('guest_code', $toDelete)->delete();
+            }
+
+            if ($toAdd) {
+                $tour->guests()->createMany(
+                    array_map(fn($g) => ['guest_code' => $g], $toAdd)
+                );
             }
         }
 
-        $this->clearCache();
+        $this->clearCacheModel();
         return $tour;
     }
 
@@ -262,66 +286,16 @@ class TourRepository extends AbstractBaseRepository implements TourInterface
 
         $tour->delete();
 
-        $this->clearCache();
+        $this->clearCacheModel();
         return true;
     }
 
-
-
-    private function getCacheKey(string $key): mixed
+    private function clearCacheModel()
     {
-        $store = Redis::connection();
-        $result = $store->get($key);
-
-        if ($result === '@null') {
-            return null;
-        }
-
-        if (!empty($result)) {
-            try {
-                $data = unserialize($result);
-                return is_array($data) ? collect($data) : $data;
-            } catch (\Exception $e) {
-                return null;
-            }
-        }
-
-        return null;
-    }
-
-    private function setCacheKey(string $key, mixed $data, int $ttl = 3600)
-    {
-        $store = Redis::connection();
-
-        if (empty($data)) {
-            $store->setex($key, $ttl, '@null');
-        } else {
-            $store->setex($key, $ttl, serialize($data->toArray()));
-        }
-    }
-
-
-    private function clearCache(): void
-    {
-        $store = Redis::connection();
-
-        $store->del([
-            ALL_TOUR,
-            TOUR_ACTIVE,
-            TOUR_INACTIVE,
+        $this->clearCache([
+            'direct' => [ALL_TOUR],
+            'patterns' => [TOUR_ID . '*', TOUR_SLUG . '*'],
         ]);
-
-        $patterns = [
-            TOUR_ID . '*',
-            TOUR_SLUG . '*',
-        ];
-
-        foreach ($patterns as $pattern) {
-            $keys = $store->keys($pattern);
-            if (!empty($keys)) {
-                $store->del($keys);
-            }
-        }
     }
 
     private function queryWithRelations()
