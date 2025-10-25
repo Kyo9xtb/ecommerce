@@ -8,16 +8,23 @@ class CustomerAuthRequest extends Request
 {
     public function rules(): array
     {
-        return [
-            // 'AppId' => ['required', 'int'],
+        $commonRules = [
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string', 'min:6'],
         ];
+
+        return match (true) {
+            $this->is('login') && $this->isMethod('POST') => $commonRules,
+            $this->is('register') && $this->isMethod('POST') =>
+                array_merge($commonRules, ['phone' => ['required', 'string', 'regex:/^(84|0[3|5|7|8|9])[0-9]{8}$/'], 'full_name' => ['required', 'string', 'max:255']]),
+            default => [],
+        };
     }
 
     public function messages(): array
     {
         return [
-            // 'AppId.required' => 'A AppId is required',
-            // 'AppId.int' => 'A AppId is int',
+            'required' => __('missing_required_parameter'),
         ];
     }
 }

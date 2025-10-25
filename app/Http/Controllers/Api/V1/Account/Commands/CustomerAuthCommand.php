@@ -11,5 +11,7 @@ use AllowDynamicProperties;
     {
         $this->email = $request->email;
         $this->password = $request->password;
+        $this->phone = $request->phone;
+        $this->full_name = $request->full_name;
     }
 }

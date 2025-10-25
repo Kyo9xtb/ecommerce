@@ -23,7 +23,7 @@ class AccountController extends Controller
 
         $command = $this->commandBus->dispatch(new CustomerAuthCommand($request));
 
-        return $command->original ?? $command;
+        return $command;
     }
 
     public function EmployeeAuth(EmployeeAuthRequest $request)

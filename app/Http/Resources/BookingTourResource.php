@@ -29,8 +29,8 @@ class BookingTourResource extends JsonResource
                 'price' => +$detail->price ?? 0,
                 'quantity' => $detail->quantity ?? 0,
                 'total_price' => $detail->price * $detail->quantity ?? 0,
-                'thumbnail_url' => $detail->tour->thumbnail
-                    ? asset(Storage::url($basePath . $detail->tour->thumbnail))
+                'thumbnail_url' => data_get($detail->tour, 'thumbnail')
+                    ? asset(Storage::url($basePath . data_get($detail->tour, 'thumbnail')))
                     : null,
                 'departure_date' => $detail->departure_date
                     ? (new \DateTime($detail->departure_date))->format('Y-m-d')

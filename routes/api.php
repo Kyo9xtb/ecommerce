@@ -29,6 +29,7 @@ Route::prefix('v1')->namespace('V1')->group(function () {
 
     Route::prefix('/customer/auth')->group(function () {
         Route::post('/login', [AccountController::class, 'CustomerAuth']);
+        Route::post('/register', [AccountController::class, 'CustomerAuth']);
         Route::post('/logout', [AccountController::class, 'CustomerAuth'])->middleware('jwt.customer');
         Route::get('/me', [AccountController::class, 'CustomerAuth'])->middleware('jwt.customer');
     });
