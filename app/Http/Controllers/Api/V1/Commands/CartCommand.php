@@ -10,10 +10,9 @@ use AllowDynamicProperties;
     {
         $this->id = $request->id;
         $this->user_id = $request->user_id;
-        $this->tour_id = $request->tour_id;
-        $this->customer = $request->customer;
-        $this->quantity = $request->quantity;
-        $this->price = $request->price;
+        $this->total_amount = $request->total_amount;
+        $this->status = $request->status;
+        $this->details = $request->details;
         $this->clear_all = $request->clear_all;
     }
 }

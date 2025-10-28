@@ -9,22 +9,24 @@ class Cart extends Model
 {
     use HasFactory;
 
-    protected $table = 'user_cart';
+    protected $table = 'cart';
     protected $primaryKey = 'id';
     public $timestamps = true;
     protected $connection = 'mysql';
 
     protected $attributes = [
-        'customer' => 1,
-        'quantity' => 0,
-        'price' => 0,
+        'total_amount' => 0,
+        'status' => 1,
     ];
 
     protected $fillable = [
         'user_id',
-        'tour_id',
-        'customer',
-        'quantity',
-        'price'
+        'total_amount',
+        'status',
     ];
+
+    public function details()
+    {
+        return $this->hasMany(CartItem::class, 'cart_id', 'id');
+    }
 }

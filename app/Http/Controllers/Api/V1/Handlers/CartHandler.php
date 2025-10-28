@@ -62,7 +62,7 @@ class CartHandler
         return CartResponse::from(
             [
                 'message' => 'Success.',
-                'data' => CartResource::collection($result)->toArray(request()),
+                'data' => (new CartResource($result))->resolve(),
             ]
         );
     }
@@ -71,14 +71,14 @@ class CartHandler
     {
         $errorMess = [];
         $userExist = $this->userInterface->findUserActive((int) $command->user_id);
-        $tourExist = $this->tourInterface->findTourById((int) $command->tour_id);
+        $cartExist = $this->cartInterface->getCartByUserId((int) $command->user_id);
 
         if (!$userExist) {
             $errorMess[] = 'User does not exist.';
         }
 
-        if (!$tourExist) {
-            $errorMess[] = 'Tour does not exist.';
+        if ($cartExist) {
+            $errorMess[] = 'Cart user does exist.';
         }
 
         if ($errorMess) {
@@ -90,10 +90,9 @@ class CartHandler
 
         $fields = [
             'user_id',
-            'tour_id',
-            'customer',
-            'quantity',
-            'price',
+            'total_amount',
+            'status',
+            'details',
         ];
 
         $inputData = array_filter(
@@ -114,7 +113,6 @@ class CartHandler
             [
                 'message' => 'Create cart success.',
                 'data' => (new CartResource($result))->resolve(),
-
             ]
         );
     }
@@ -122,11 +120,9 @@ class CartHandler
     private function handleUpdate($command)
     {
         $fields = [
-            'user_id',
-            'tour_id',
-            'customer',
-            'quantity',
-            'price',
+            'total_amount',
+            'status',
+            'details',
         ];
 
         $inputData = CommandDataHelper::extract($fields, $command);

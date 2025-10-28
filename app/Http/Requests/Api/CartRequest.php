@@ -14,7 +14,7 @@ class CartRequest extends Request
             return [
                 'id' => ['required', 'int'],
                 'user_id' => ['nullable', 'int'],
-                'clear_all' => ['required', 'int', 'in:0,1'],
+                'clear_all' => ['nullable', 'int', 'in:0,1'],
             ];
         }
 
@@ -24,14 +24,12 @@ class CartRequest extends Request
 
         $rules = [
             'user_id' => ['required', 'int'],
-            'tour_id' => ['required', 'int'],
-            'customer' => ['required', 'int', 'in:1,2,3'], // 1: Adult, 2: Children, 3: Baby
-            'quantity' => ['required', 'int', 'min:1'],
-            'price' => ['required', 'numeric'],
+            'total_amount' => ['required', 'integer'],
+            'status' => ['nullable', 'integer', 'in:1,2,3'], // 1: Adult, 2: Children, 3: Baby
         ];
 
         if ($method === 'PUT') {
-            $rules['id'] = ['required', 'int'];
+            $rules['id'] = ['required', 'integer'];
         }
 
         return $rules;
