@@ -89,15 +89,23 @@ class NewsHandler
 
         $this->validateUniqueNews($command, $idReq);
 
-        if ($newsExist->thumbnail && ($command->request->hasFile('thumbnail') || !$command->thumbnail)) {
-            $this->deleteOldFiles($newsExist, $idReq);
+        $hasNewFile = $command->request->hasFile('thumbnail');
+        $thumbnail = $newsExist->thumbnail;
+
+        if ($hasNewFile) {
+            if ($thumbnail) {
+                $this->deleteOldFiles($newsExist, $idReq);
+            }
+
+            extract($this->processFiles($command));
         }
 
-        extract($this->processFiles($command));
 
         $fields = ['title', 'slug', 'meta_title', 'description', 'meta_description', 'content', 'author', 'status'];
 
         $inputData = CommandDataHelper::extract($fields, $command);
+
+
         $inputData['thumbnail'] = $thumbnail;
 
         $result = $this->newsInterface->updateNews($idReq, $inputData);
@@ -109,7 +117,8 @@ class NewsHandler
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
-        $this->moveFiles($idReq, $thumbnail);
+        if ($hasNewFile && $thumbnail)
+            $this->moveFiles($idReq, $thumbnail);
 
         return new NewsResponse("Update news success", (new NewsResource($result))->resolve());
     }
