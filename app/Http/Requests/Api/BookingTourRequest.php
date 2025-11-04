@@ -8,7 +8,6 @@ class BookingTourRequest extends Request
 {
     public function rules(): array
     {
-        // return [];
         $method = request()->method();
 
         if ($method === 'DELETE') {
@@ -34,6 +33,7 @@ class BookingTourRequest extends Request
 
         if ($method === 'PUT') {
             $rules['id'] = ['required', 'int'];
+            $rules['booking_code'] = ['required', 'string'];
         }
 
         return $rules;

@@ -22,13 +22,14 @@ class BookingTourResource extends JsonResource
             $basePath = "tour/{$detail->tour_id}/";
 
             return [
-                'id'=> $detail->id,
+                'id' => $detail->id,
                 'tour_id' => $detail->tour_id,
+                'tour_code' => $detail->tour->tour_code ?? null,
                 'tour_name' => $detail->tour->tour_name ?? null,
                 'guest_id' => $detail->guest_id,
-                'price' => +$detail->price ?? 0,
-                'quantity' => $detail->quantity ?? 0,
-                'total_price' => $detail->price * $detail->quantity ?? 0,
+                'price' => (float) ($detail->price ?? 0),
+                'quantity' => (int) ($detail->quantity ?? 0),
+                'total_price' => (float) (($detail->price ?? 0) * ($detail->quantity ?? 0)),
                 'thumbnail_url' => data_get($detail->tour, 'thumbnail')
                     ? asset(Storage::url($basePath . data_get($detail->tour, 'thumbnail')))
                     : null,
@@ -40,18 +41,19 @@ class BookingTourResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'user_id' => $this->user_id ?? null,
-            'full_name' => $this->full_name ?? null,
-            'email' => $this->email ?? null,
-            'phone' => $this->phone ?? null,
-            'address' => $this->address ?? 0,
-            'total_price' => +$this->total_price ?? 0,
-            'deposit' => +$this->deposit ?? 0,
-            'unpaid' => $this->total_price - $this->deposit ?? 0,
+            'booking_code' => $this->booking_code,
+            'user_id' => $this->user_id,
+            'full_name' => $this->full_name,
+            'email' => $this->email,
+            'phone' => $this->phone,
+            'address' => $this->address,
+            'total_price' => (float) ($this->total_price ?? 0),
+            'deposit' => (float) ($this->deposit ?? 0),
+            'unpaid' => (float)(($this->total_price) - ($this->deposit ?? 0)),
             'discount_code' => $this->discount_code ?? 0,
             'currency' => $this->currency ?? null,
-            'payment_method' => $this->payment_method ?? null,
-            'status' => $this->status ?? 1,
+            'payment_method' => (int) ($this->payment_method ?? 0),
+            'status' => (int) ($this->status ?? 1),
             'details' => $details->isEmpty() ? null : $details,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),

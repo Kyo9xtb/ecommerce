@@ -8,15 +8,15 @@ use App\Helper\CommandDataHelper;
 use App\Http\Resources\CartResource;
 use App\Http\Responses\Api\CartResponse;
 use App\Repositories\Cart\CartInterface;
+use App\Repositories\Customer\CustomerInterface;
 use App\Repositories\Tour\TourInterface;
-use App\Repositories\User\UserInterface;
 
 class CartHandler
 {
 
     public function __construct(
         public CartInterface $cartInterface,
-        public UserInterface $userInterface,
+        public CustomerInterface $customerInterface,
         public TourInterface $tourInterface,
 
     ) {}
@@ -41,7 +41,7 @@ class CartHandler
                 ResponseStatusCode::PARAMS_INVALID
             );
         }
-        $userExist = $this->userInterface->findUserActive((int) $id);
+        $userExist = $this->customerInterface->findCustomerById((int) $id);
 
         if (!$userExist) {
             throw new JsonApiException(
@@ -70,7 +70,7 @@ class CartHandler
     private function handleCreate($command)
     {
         $errorMess = [];
-        $userExist = $this->userInterface->findUserActive((int) $command->user_id);
+        $userExist = $this->customerInterface->findCustomerById((int) $command->user_id);
         $cartExist = $this->cartInterface->getCartByUserId((int) $command->user_id);
 
         if (!$userExist) {

@@ -26,6 +26,7 @@ class BookingTour extends Model
 
     protected $fillable = [
         'user_id',
+        'booking_code',
         'full_name',
         'email',
         'phone',

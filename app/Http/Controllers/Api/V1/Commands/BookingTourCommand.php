@@ -25,5 +25,6 @@ use AllowDynamicProperties;
         $this->date = $request->date;
         $this->month = $request->month;
         $this->report = $request->report;
+        $this->booking_code = $request->booking_code;
     }
 }

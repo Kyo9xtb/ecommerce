@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Handlers;
 
 use App\Enum\ResponseStatusCode;
 use App\Exceptions\JsonApiException;
+use App\Helper\CodeHelper;
 use App\Helper\CommandDataHelper;
 use App\Http\Resources\BookingTourResource;
 use App\Http\Responses\Api\BookingTourResponse;
@@ -21,9 +22,9 @@ class BookingTourHandler
         $method = $command->request->getMethod();
         return match ($method) {
             'GET' => $this->handleGet($command),
-            'POST'   => $this->handleWrite($command, 'createBookingTour', 'Create success'),
-            'PUT'    => $this->handleWrite($command, 'updateBookingTour', 'Update success', (int) $command->id),
-            'DELETE' => $this->handleDelete($command->id),
+            'POST'   => $this->handleCreate($command),
+            'PUT'    => $this->handleUpdate($command),
+            'DELETE' => $this->handleDelete((int) $command->id),
             default  => throw new JsonApiException('Method not supported', ResponseStatusCode::PARAMS_INVALID),
         };
     }
@@ -146,6 +147,88 @@ class BookingTourHandler
 
         return BookingTourResponse::from([
             'message' => $successMessage,
+            'data' => (new BookingTourResource($data))->resolve(),
+        ]);
+    }
+
+
+    private function handleCreate($command)
+    {
+        $fields = [
+            'user_id',
+            'full_name',
+            'email',
+            'phone',
+            'currency',
+            'address',
+            'note',
+            'total_price',
+            'deposit',
+            'payment_method',
+            'status',
+            'details',
+        ];
+
+        $inputData = array_filter(CommandDataHelper::extract($fields, $command), fn($v) => !is_null($v));
+
+        do {
+            $prefix = !empty($inputData['user_id']) ? 'MEM' : 'IND';
+
+            $bookingCode = CodeHelper::generateCodeNumeric($prefix);
+        } while ($this->bookingTourInterface->findBookingTourByCode($bookingCode));
+
+        $inputData['booking_code'] = $bookingCode;
+
+        $data = $this->bookingTourInterface->createBookingTour($inputData);
+
+        if (!$data) {
+            throw new JsonApiException("Create booking tour failed", ResponseStatusCode::PARAMS_INVALID);
+        }
+
+        return BookingTourResponse::from([
+            'message' => 'Create booking tour success',
+            'data' => (new BookingTourResource($data))->resolve(),
+        ]);
+    }
+
+    private function handleUpdate($command)
+    {
+        $idReq = (int) $command->id;
+        $existBooking = $this->bookingTourInterface->find($idReq);
+
+        if (!$existBooking) {
+            throw new JsonApiException('No tour booking information available.', ResponseStatusCode::PARAMS_INVALID);
+        }
+
+        if ($existBooking->booking_code !== $command->booking_code) {
+            throw new JsonApiException('The tour code has been changed.', ResponseStatusCode::PARAMS_INVALID);
+        }
+
+        $fields = [
+            'user_id',
+            'full_name',
+            'email',
+            'phone',
+            'currency',
+            'address',
+            'note',
+            'total_price',
+            'deposit',
+            'payment_method',
+            'status',
+            'details',
+        ];
+
+        $inputData = CommandDataHelper::extract($fields, $command);
+
+        $data = $this->bookingTourInterface->updateBookingTour($idReq, $inputData);
+
+        if (!$data) {
+            throw new JsonApiException("Update booking tour failed", ResponseStatusCode::PARAMS_INVALID);
+        }
+
+        return BookingTourResponse::from([
+            'message' => 'Update booking tour success',
             'data' => (new BookingTourResource($data))->resolve(),
         ]);
     }
